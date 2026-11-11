@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Irrigação Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <header class="bg-white p-6 rounded-xl shadow flex justify-between items-center">
+            <h1 class="text-xl font-bold">🌱 Dashboard de Irrigação</h1>
+            <div class="flex items-center space-x-2">
+                <span id="dot" class="h-3 w-3 rounded-full bg-red-500"></span>
+                <span id="status" class="text-sm text-gray-600 font-semibold">Desconectado</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-xl shadow text-center">
+                <h2 class="text-gray-500 text-xs font-bold">UMIDADE ATUAL</h2>
+                <p id="valor-umidade" class="text-5xl font-extrabold text-blue-600 my-3">--%</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow text-center">
+                <h2 class="text-gray-500 text-xs font-bold">ESTADO DO RELÉ</h2>
+                <div class="my-4"><span id="badge-rele" class="px-4 py-2 rounded-full text-white font-bold bg-gray-400">DESLIGADO</span></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow">
+                <h2 class="text-gray-500 text-xs font-bold mb-2">AJUSTE DE LIMITE (%)</h2>
+                <div class="flex">
+                    <input type="number" id="input-limite" class="border rounded-l px-3 py-1 w-full" value="30">
+                    <button onclick="enviarLimite()" class="bg-blue-600 text-white px-4 py-1 rounded-r font-semibold">Salvar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow">
+            <h2 class="font-bold mb-4">📈 Histórico de Umidade</h2>
+            <div class="relative h-64"><canvas id="grafico"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('grafico').getContext('2d');
+        const grafico = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Umidade (%)', data: [], borderColor: 'rgb(37, 99, 235)', tension: 0.3, fill: true, backgroundColor: 'rgba(37,99,235,0.1)' }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+        });
+
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+        client.on('connect', () => {
+            document.getElementById('dot').className = 'h-3 w-3 rounded-full bg-green-500';
+            document.getElementById('status').innerText = 'Conectado';
+            client.subscribe('estufa/umidade');
+            client.subscribe('estufa/rele');
+        });
+
+        client.on('message', (topic, payload) => {
+            let val = payload.toString();
+            let hora = new Date().toLocaleTimeString();
+
+            if (topic === 'estufa/umidade') {
+                document.getElementById('valor-umidade').innerText = val + '%';
+                if (grafico.data.labels.length > 15) { grafico.data.labels.shift(); grafico.data.datasets[0].data.shift(); }
+                grafico.data.labels.push(hora);
+                grafico.data.datasets[0].data.push(parseInt(val));
+                grafico.update();
+            } else if (topic === 'estufa/rele') {
+                let badge = document.getElementById('badge-rele');
+                if (val === '1') {
+                    badge.innerText = "LIGADO"; badge.className = "px-4 py-2 rounded-full text-white font-bold bg-green-500";
+                } else {
+                    badge.innerText = "DESLIGADO"; badge.className = "px-4 py-2 rounded-full text-white font-bold bg-red-500";
+                }
+            }
+        });
+
+        function enviarLimite() {
+            let lim = document.getElementById('input-limite').value;
+            client.publish('estufa/config/limite', lim);
+            alert('Novo limite enviado para o ESP32!');
+        }
+    </script>
+</body>
+</html>
