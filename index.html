@@ -57,3 +57,44 @@
 
         client.on('connect', () => {
             document.getElementById('dot').className = 'h-3 w-3 rounded-full bg-green-500';
+            document.getElementById('status').innerText = 'Conectado';
+            
+            client.subscribe('meuprojeto_estufa/umidade');
+            client.subscribe('meuprojeto_estufa/rele');
+        });
+
+        client.on('message', (topic, payload) => {
+            let val = payload.toString();
+            let hora = new Date().toLocaleTimeString();
+
+            if (topic === 'meuprojeto_estufa/umidade') {
+                document.getElementById('valor-umidade').innerText = val + '%';
+                if (grafico.data.labels.length > 15) { grafico.data.labels.shift(); grafico.data.datasets[0].data.shift(); }
+                grafico.data.labels.push(hora);
+                grafico.data.datasets[0].data.push(parseInt(val));
+                grafico.update();
+            } else if (topic === 'meuprojeto_estufa/rele') {
+                let badge = document.getElementById('badge-rele');
+                if (val === '1') {
+                    badge.innerText = "LIGADO"; badge.className = "px-4 py-2 rounded-full text-white font-bold bg-green-500";
+                } else {
+                    badge.innerText = "DESLIGADO"; badge.className = "px-4 py-2 rounded-full text-white font-bold bg-red-500";
+                }
+            }
+        });
+
+        function enviarLimite() {
+            let input = document.getElementById('input-limite');
+            let lim = parseInt(input.value);
+
+            if (isNaN(lim) || lim < 0 || lim > 100) {
+                alert('Por favor, insira um valor válido entre 0 e 100.');
+                return;
+            }
+
+            client.publish('meuprojeto_estufa/config/limite', lim.toString());
+            alert('Novo limite de ' + lim + '% enviado com segurança!');
+        }
+    </script>
+</body>
+</html>
