@@ -87,4 +87,13 @@
 
             // Validação de segurança no JavaScript
             if (isNaN(lim) || lim < 0 || lim > 100) {
-                alert('Por favor, insira um valor
+                alert('Por favor, insira um valor válido entre 0 e 100.');
+                return;
+            }
+
+            client.publish('meuprojeto_estufa/config/limite', lim.toString());
+            alert('Novo limite de ' + lim + '% enviado com segurança!');
+        }
+    </script>
+</body>
+</html>
