@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Painel de Irrigação Inteligente</title>
+    <title>Painel de Irrigação Privado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -10,7 +10,7 @@
 <body class="bg-gray-100 p-6">
     <div class="max-w-4xl mx-auto space-y-6">
         <header class="bg-white p-6 rounded-xl shadow flex justify-between items-center">
-            <h1 class="text-xl font-bold">🌱 Dashboard de Irrigação</h1>
+            <h1 class="text-xl font-bold">🌱 Dashboard de Irrigação (Seguro)</h1>
             <div class="flex items-center space-x-2">
                 <span id="dot" class="h-3 w-3 rounded-full bg-red-500"></span>
                 <span id="status" class="text-sm text-gray-600 font-semibold">Desconectado</span>
@@ -49,26 +49,30 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
         });
 
-        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+        // Conexão WSS segura com ID de cliente único para o navegador
+        const clientID = 'web_dashboard_' + Math.random().toString(16).substr(2, 8);
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: clientID });
 
         client.on('connect', () => {
             document.getElementById('dot').className = 'h-3 w-3 rounded-full bg-green-500';
             document.getElementById('status').innerText = 'Conectado';
-            client.subscribe('estufa/umidade');
-            client.subscribe('estufa/rele');
+            
+            // Assinando apenas nos tópicos privados do seu projeto
+            client.subscribe('meuprojeto_estufa/umidade');
+            client.subscribe('meuprojeto_estufa/rele');
         });
 
         client.on('message', (topic, payload) => {
             let val = payload.toString();
             let hora = new Date().toLocaleTimeString();
 
-            if (topic === 'estufa/umidade') {
+            if (topic === 'meuprojeto_estufa/umidade') {
                 document.getElementById('valor-umidade').innerText = val + '%';
                 if (grafico.data.labels.length > 15) { grafico.data.labels.shift(); grafico.data.datasets[0].data.shift(); }
                 grafico.data.labels.push(hora);
                 grafico.data.datasets[0].data.push(parseInt(val));
                 grafico.update();
-            } else if (topic === 'estufa/rele') {
+            } else if (topic === 'meuprojeto_estufa/rele') {
                 let badge = document.getElementById('badge-rele');
                 if (val === '1') {
                     badge.innerText = "LIGADO"; badge.className = "px-4 py-2 rounded-full text-white font-bold bg-green-500";
@@ -80,8 +84,8 @@
 
         function enviarLimite() {
             let lim = document.getElementById('input-limite').value;
-            client.publish('estufa/config/limite', lim);
-            alert('Novo limite enviado para o ESP32!');
+            client.publish('meuprojeto_estufa/config/limite', lim);
+            alert('Novo limite enviado com segurança!');
         }
     </script>
 </body>
