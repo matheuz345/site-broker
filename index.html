@@ -53,7 +53,7 @@
         });
 
         const clientID = 'web_dashboard_' + Math.random().toString(16).substr(2, 8);
-        const client = mqtt.connect('mqtt://broker.hivemq.com:1883', { clientId: clientID });
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: clientID });
 
         client.on('connect', () => {
             document.getElementById('dot').className = 'h-3 w-3 rounded-full bg-green-500';
