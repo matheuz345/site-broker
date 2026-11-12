@@ -27,9 +27,9 @@
                 <div class="my-4"><span id="badge-rele" class="px-4 py-2 rounded-full text-white font-bold bg-gray-400">DESLIGADO</span></div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow">
-                <h2 class="text-gray-500 text-xs font-bold mb-2">AJUSTE DE LIMITE (0 a 100%)</h2>
+                <h2 class="text-gray-500 text-xs font-bold mb-2">AJUSTE DE LIMITE (%)</h2>
                 <div class="flex">
-                    <!-- Adicionado min="0" e max="100" -->
+                    <!-- Configurado explicitamente de 0 a 100 -->
                     <input type="number" id="input-limite" min="0" max="100" class="border rounded-l px-3 py-1 w-full" value="30">
                     <button onclick="enviarLimite()" class="bg-blue-600 text-white px-4 py-1 rounded-r font-semibold">Salvar</button>
                 </div>
@@ -85,7 +85,6 @@
             let input = document.getElementById('input-limite');
             let lim = parseInt(input.value);
 
-            // Validação de segurança no JavaScript
             if (isNaN(lim) || lim < 0 || lim > 100) {
                 alert('Por favor, insira um valor válido entre 0 e 100.');
                 return;
