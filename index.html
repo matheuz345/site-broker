@@ -27,9 +27,10 @@
                 <div class="my-4"><span id="badge-rele" class="px-4 py-2 rounded-full text-white font-bold bg-gray-400">DESLIGADO</span></div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow">
-                <h2 class="text-gray-500 text-xs font-bold mb-2">AJUSTE DE LIMITE (%)</h2>
+                <h2 class="text-gray-500 text-xs font-bold mb-2">AJUSTE DE LIMITE (0 a 100%)</h2>
                 <div class="flex">
-                    <input type="number" id="input-limite" class="border rounded-l px-3 py-1 w-full" value="30">
+                    <!-- Adicionado min="0" e max="100" -->
+                    <input type="number" id="input-limite" min="0" max="100" class="border rounded-l px-3 py-1 w-full" value="30">
                     <button onclick="enviarLimite()" class="bg-blue-600 text-white px-4 py-1 rounded-r font-semibold">Salvar</button>
                 </div>
             </div>
@@ -49,7 +50,6 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
         });
 
-        // Conexão WSS segura com ID de cliente único para o navegador
         const clientID = 'web_dashboard_' + Math.random().toString(16).substr(2, 8);
         const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: clientID });
 
@@ -57,7 +57,6 @@
             document.getElementById('dot').className = 'h-3 w-3 rounded-full bg-green-500';
             document.getElementById('status').innerText = 'Conectado';
             
-            // Assinando apenas nos tópicos privados do seu projeto
             client.subscribe('meuprojeto_estufa/umidade');
             client.subscribe('meuprojeto_estufa/rele');
         });
@@ -83,10 +82,9 @@
         });
 
         function enviarLimite() {
-            let lim = document.getElementById('input-limite').value;
-            client.publish('meuprojeto_estufa/config/limite', lim);
-            alert('Novo limite enviado com segurança!');
-        }
-    </script>
-</body>
-</html>
+            let input = document.getElementById('input-limite');
+            let lim = parseInt(input.value);
+
+            // Validação de segurança no JavaScript
+            if (isNaN(lim) || lim < 0 || lim > 100) {
+                alert('Por favor, insira um valor
