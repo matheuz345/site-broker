@@ -20,7 +20,6 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white p-6 rounded-xl shadow text-center">
                 <h2 class="text-gray-500 text-xs font-bold">UMIDADE ATUAL</h2>
-                <!-- Texto alterado para verde (text-green-600) -->
                 <p id="valor-umidade" class="text-5xl font-extrabold text-green-600 my-3">--%</p>
             </div>
             <div class="bg-white p-6 rounded-xl shadow text-center">
@@ -31,7 +30,6 @@
                 <h2 class="text-gray-500 text-xs font-bold mb-2">AJUSTE DE LIMITE (%)</h2>
                 <div class="flex">
                     <input type="number" id="input-limite" min="0" max="100" class="border rounded-l px-3 py-1 w-full" value="30">
-                    <!-- Botão alterado para fundo verde (bg-green-600) -->
                     <button onclick="enviarLimite()" class="bg-green-600 text-white px-4 py-1 rounded-r font-semibold">Salvar</button>
                 </div>
             </div>
@@ -47,12 +45,13 @@
         const ctx = document.getElementById('grafico').getContext('2d');
         const grafico = new Chart(ctx, {
             type: 'line',
-            // O gráfico foi mantido com a cor azul original conforme solicitado
             data: { labels: [], datasets: [{ label: 'Umidade (%)', data: [], borderColor: 'rgb(37, 99, 235)', tension: 0.3, fill: true, backgroundColor: 'rgba(37,99,235,0.1)' }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
         });
 
         const clientID = 'web_dashboard_' + Math.random().toString(16).substr(2, 8);
+        
+        // Linha ajustada para wss:// na porta 8884
         const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: clientID });
 
         client.on('connect', () => {
