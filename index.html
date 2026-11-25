@@ -1,99 +1,372 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Painel de Irrigação Privado</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Irrigação - Estufa IoT</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 22px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    .status-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: #334155;
+      color: var(--muted);
+    }
+
+    .status-pill.online {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .status-pill.offline {
+      background: rgba(239, 68, 68, 0.16);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .grid-telemetry {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .metric-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 1.65rem;
+      font-weight: 700;
+    }
+
+    .metric-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .rele-on {
+      color: #34d399;
+    }
+
+    .rele-off {
+      color: #94a3b8;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .control-group h2 {
+      margin: 0 0 6px 0;
+      font-size: 1.05rem;
+    }
+
+    .control-group p {
+      margin: 0 0 14px 0;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input[type="number"] {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0f172a;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #052e16;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .preset-btn {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #0f172a;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .preset-btn:hover {
+      background: #334155;
+    }
+
+    .feedback {
+      font-size: 0.84rem;
+      color: #34d399;
+      min-height: 1.2em;
+      margin-top: 10px;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 p-6">
-    <div class="max-w-4xl mx-auto space-y-6">
-        <header class="bg-white p-6 rounded-xl shadow flex justify-between items-center">
-            <h1 class="text-xl font-bold">🌱 Dashboard de Irrigação (Seguro)</h1>
-            <div class="flex items-center space-x-2">
-                <span id="dot" class="h-3 w-3 rounded-full bg-red-500"></span>
-                <span id="status" class="text-sm text-gray-600 font-semibold">Desconectado</span>
-            </div>
-        </header>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Estufa IoT — Irrigação Sincronizada por RTC</h1>
+        <div class="metric-sub">Broker: broker.hivemq.com | Tópico base: meuprojeto_estufa</div>
+      </div>
+      <div id="mqttStatus" class="status-pill">Conectando ao MQTT...</div>
+    </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white p-6 rounded-xl shadow text-center">
-                <h2 class="text-gray-500 text-xs font-bold">UMIDADE ATUAL</h2>
-                <p id="valor-umidade" class="text-5xl font-extrabold text-green-600 my-3">--%</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow text-center">
-                <h2 class="text-gray-500 text-xs font-bold">ESTADO DO RELÉ</h2>
-                <div class="my-4"><span id="badge-rele" class="px-4 py-2 rounded-full text-white font-bold bg-gray-400">DESLIGADO</span></div>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow">
-                <h2 class="text-gray-500 text-xs font-bold mb-2">AJUSTE DE LIMITE (%)</h2>
-                <div class="flex">
-                    <input type="number" id="input-limite" min="0" max="100" class="border rounded-l px-3 py-1 w-full" value="30">
-                    <button onclick="enviarLimite()" class="bg-green-600 text-white px-4 py-1 rounded-r font-semibold">Salvar</button>
-                </div>
-            </div>
+    <section class="grid-telemetry">
+      <div class="card">
+        <div class="metric-label">Umidade do Solo</div>
+        <div id="valorUmidade" class="metric-value">-- %</div>
+        <div class="metric-sub">Leitura em tempo real (GPIO 0)</div>
+      </div>
+
+      <div class="card">
+        <div class="metric-label">Estado do Relé (GPIO 10)</div>
+        <div id="estadoRele" class="metric-value rele-off">--</div>
+        <div id="infoUltimaIrrigacao" class="metric-sub">Última irrigação: --:--:--</div>
+      </div>
+
+      <div class="card">
+        <div class="metric-label">Horário Sincronizado (RTC)</div>
+        <div id="horaRtc" class="metric-value">--:--:--</div>
+        <div class="metric-sub">Relógio DS1307 do Gateway</div>
+      </div>
+
+      <div class="card">
+        <div class="metric-label">Regras Ativas no Sensor</div>
+        <div id="regrasAtivas" class="metric-value" style="font-size: 1.25rem;">--% | -- min</div>
+        <div class="metric-sub">Limite mínimo | Intervalo RTC</div>
+      </div>
+    </section>
+
+    <section class="controls-grid">
+      <div class="card control-group">
+        <h2>Limite de Umidade (%)</h2>
+        <p>O relé só liga se a umidade medida estiver abaixo deste valor (0% a 100%).</p>
+        <div class="input-row">
+          <input type="number" id="inputLimite" min="0" max="100" value="30" />
+          <button onclick="enviarLimite()">Aplicar Limite</button>
         </div>
+        <div id="feedbackLimite" class="feedback"></div>
+      </div>
 
-        <div class="bg-white p-6 rounded-xl shadow">
-            <h2 class="font-bold mb-4">📈 Histórico de Umidade</h2>
-            <div class="relative h-64"><canvas id="grafico"></canvas></div>
+      <div class="card control-group">
+        <h2>Intervalo entre Irrigações (minutos)</h2>
+        <p>Define o tempo mínimo (baseado no horário do RTC) entre o início de uma irrigação e a próxima. Use <b>0</b> para sem bloqueio de tempo.</p>
+        <div class="input-row">
+          <input type="number" id="inputIntervalo" min="0" max="1440" value="0" />
+          <button onclick="enviarIntervalo()">Aplicar Intervalo</button>
         </div>
-    </div>
+        <div class="presets">
+          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(0)">Sem pausa (0 min)</button>
+          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(5)">5 min</button>
+          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(15)">15 min</button>
+          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(30)">30 min</button>
+          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(60)">1 hora</button>
+        </div>
+        <div id="feedbackIntervalo" class="feedback"></div>
+      </div>
+    </section>
+  </div>
 
-    <script>
-        const ctx = document.getElementById('grafico').getContext('2d');
-        const grafico = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'Umidade (%)', data: [], borderColor: 'rgb(37, 99, 235)', tension: 0.3, fill: true, backgroundColor: 'rgba(37,99,235,0.1)' }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
-        });
+  <script>
+    const BROKER_URL = "wss://broker.hivemq.com:8884/mqtt";
 
-        const clientID = 'web_dashboard_' + Math.random().toString(16).substr(2, 8);
-        
-        // Linha ajustada para wss:// na porta 8884
-        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: clientID });
+    const TOPICOS = {
+      umidade: "meuprojeto_estufa/umidade",
+      rele: "meuprojeto_estufa/rele",
+      hora: "meuprojeto_estufa/hora",
+      ultimaIrrigacao: "meuprojeto_estufa/ultima_irrigacao",
+      limiteCfg: "meuprojeto_estufa/config/limite",
+      limiteAtivo: "meuprojeto_estufa/config/limite_ativo",
+      intervaloCfg: "meuprojeto_estufa/config/intervalo_min",
+      intervaloAtivo: "meuprojeto_estufa/config/intervalo_ativo"
+    };
 
-        client.on('connect', () => {
-            document.getElementById('dot').className = 'h-3 w-3 rounded-full bg-green-500';
-            document.getElementById('status').innerText = 'Conectado';
-            
-            client.subscribe('meuprojeto_estufa/umidade');
-            client.subscribe('meuprojeto_estufa/rele');
-        });
+    let limiteAtivoAtual = "--";
+    let intervaloAtivoAtual = "--";
 
-        client.on('message', (topic, payload) => {
-            let val = payload.toString();
-            let hora = new Date().toLocaleTimeString();
+    const clientId = "EstufaWeb_" + Math.random().toString(16).substring(2, 10);
+    const client = mqtt.connect(BROKER_URL, {
+      clientId,
+      clean: true,
+      connectTimeout: 5000,
+      reconnectPeriod: 3000
+    });
 
-            if (topic === 'meuprojeto_estufa/umidade') {
-                document.getElementById('valor-umidade').innerText = val + '%';
-                if (grafico.data.labels.length > 15) { grafico.data.labels.shift(); grafico.data.datasets[0].data.shift(); }
-                grafico.data.labels.push(hora);
-                grafico.data.datasets[0].data.push(parseInt(val));
-                grafico.update();
-            } else if (topic === 'meuprojeto_estufa/rele') {
-                let badge = document.getElementById('badge-rele');
-                if (val === '1') {
-                    badge.innerText = "LIGADO"; badge.className = "px-4 py-2 rounded-full text-white font-bold bg-green-500";
-                } else {
-                    badge.innerText = "DESLIGADO"; badge.className = "px-4 py-2 rounded-full text-white font-bold bg-red-500";
-                }
-            }
-        });
+    const statusEl = document.getElementById("mqttStatus");
 
-        function enviarLimite() {
-            let input = document.getElementById('input-limite');
-            let lim = parseInt(input.value);
+    client.on("connect", () => {
+      statusEl.textContent = "Conectado ao HiveMQ";
+      statusEl.className = "status-pill online";
 
-            if (isNaN(lim) || lim < 0 || lim > 100) {
-                alert('Por favor, insira um valor válido entre 0 e 100.');
-                return;
-            }
+      client.subscribe([
+        TOPICOS.umidade,
+        TOPICOS.rele,
+        TOPICOS.hora,
+        TOPICOS.ultimaIrrigacao,
+        TOPICOS.limiteAtivo,
+        TOPICOS.intervaloAtivo
+      ]);
+    });
 
-            client.publish('meuprojeto_estufa/config/limite', lim.toString());
-            alert('Novo limite de ' + lim + '% enviado com segurança!');
-        }
-    </script>
+    client.on("reconnect", () => {
+      statusEl.textContent = "Reconectando...";
+      statusEl.className = "status-pill";
+    });
+
+    client.on("offline", () => {
+      statusEl.textContent = "Desconectado";
+      statusEl.className = "status-pill offline";
+    });
+
+    client.on("message", (topic, payload) => {
+      const msg = payload.toString().trim();
+
+      if (topic === TOPICOS.umidade) {
+        document.getElementById("valorUmidade").textContent = `${msg} %`;
+      } else if (topic === TOPICOS.rele) {
+        const releEl = document.getElementById("estadoRele");
+        const ligado = msg === "1";
+        releEl.textContent = ligado ? "LIGADO" : "DESLIGADO";
+        releEl.className = ligado ? "metric-value rele-on" : "metric-value rele-off";
+      } else if (topic === TOPICOS.hora) {
+        document.getElementById("horaRtc").textContent = msg;
+      } else if (topic === TOPICOS.ultimaIrrigacao) {
+        document.getElementById("infoUltimaIrrigacao").textContent = `Última irrigação: ${msg}`;
+      } else if (topic === TOPICOS.limiteAtivo) {
+        limiteAtivoAtual = msg;
+        atualizarResumoRegras();
+      } else if (topic === TOPICOS.intervaloAtivo) {
+        intervaloAtivoAtual = msg;
+        atualizarResumoRegras();
+      }
+    });
+
+    function atualizarResumoRegras() {
+      document.getElementById("regrasAtivas").textContent =
+        `${limiteAtivoAtual}% | ${intervaloAtivoAtual} min`;
+    }
+
+    function enviarLimite() {
+      const input = document.getElementById("inputLimite");
+      let val = parseInt(input.value, 10);
+      if (isNaN(val)) val = 30;
+      val = Math.max(0, Math.min(100, val));
+      input.value = val;
+
+      client.publish(TOPICOS.limiteCfg, String(val), { qos: 0, retain: true });
+      document.getElementById("feedbackLimite").textContent =
+        `Limite de ${val}% enviado ao Gateway/Sensor.`;
+    }
+
+    function enviarIntervalo() {
+      const input = document.getElementById("inputIntervalo");
+      let val = parseInt(input.value, 10);
+      if (isNaN(val)) val = 0;
+      val = Math.max(0, Math.min(1440, val));
+      input.value = val;
+
+      client.publish(TOPICOS.intervaloCfg, String(val), { qos: 0, retain: true });
+      document.getElementById("feedbackIntervalo").textContent =
+        `Intervalo de ${val} minuto(s) enviado ao Gateway/Sensor.`;
+    }
+
+    function definirPresetIntervalo(minutos) {
+      document.getElementById("inputIntervalo").value = minutos;
+      enviarIntervalo();
+    }
+  </script>
 </body>
 </html>
