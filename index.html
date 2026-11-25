@@ -516,6 +516,7 @@
 
   <script>
     const GEMINI_API_KEY_PADRAO = "AQ.Ab8RN6IHovw0TTl5uGm3R_nbnnUw7ozKyon-TjM1YBJnPq8Ngg";
+    const TIMEOUT_PADRAO_MS = 15000;
 
     const MODULOS_CONFIG = [
       { id: 1, nome: "Módulo 1" },
@@ -534,6 +535,7 @@
         limite: 30,
         intervalo: 0,
         duracao: 10,
+        ultimaAtualizacaoMs: 0,
         labels: [],
         dadosGrafico: [],
         historico: []
@@ -574,13 +576,25 @@
       }
     });
 
+    function moduloEstaAtivo(st, agora = Date.now()) {
+      if (st.umidade === null || !st.ultimaAtualizacaoMs) return false;
+      const limiteSilencioMs = st.intervalo > 0
+        ? (st.intervalo * 60000) + 20000
+        : TIMEOUT_PADRAO_MS;
+      return (agora - st.ultimaAtualizacaoMs) <= limiteSilencioMs;
+    }
+
     function calcularEstimativaHorta() {
-      const ativos = MODULOS_CONFIG.map((m) => estadoModulos[m.id]).filter((st) => st.umidade !== null);
+      const agora = Date.now();
+      const ativos = MODULOS_CONFIG
+        .map((m) => estadoModulos[m.id])
+        .filter((st) => moduloEstaAtivo(st, agora));
+
       if (ativos.length === 0) {
         return {
           classe: "aguardando",
           rotulo: "AGUARDANDO DADOS",
-          descricao: "Aguardando leituras dos sensores da horta.",
+          descricao: "Nenhum módulo enviando telemetria no momento.",
           media: null,
           ativosCount: 0,
           regandoCount: 0
@@ -622,6 +636,7 @@
 
     function renderizarAbas() {
       const tabsBar = document.getElementById("tabsBar");
+      const agora = Date.now();
       const est = calcularEstimativaHorta();
       const pillGeral = est.media !== null ? `${est.media}%` : "Geral";
 
@@ -634,7 +649,8 @@
 
       html += MODULOS_CONFIG.map((m) => {
         const st = estadoModulos[m.id];
-        const umidTexto = st.umidade !== null ? `${st.umidade}%` : "--%";
+        const online = moduloEstaAtivo(st, agora);
+        const umidTexto = (online && st.umidade !== null) ? `${st.umidade}%` : "Offline";
         return `
           <button class="tab-btn ${abaAtiva === m.id ? "active" : ""}" onclick="selecionarAba(${m.id})">
             🌱 ${m.nome}
@@ -662,6 +678,7 @@
     }
 
     function atualizarTelaGeral() {
+      const agora = Date.now();
       const est = calcularEstimativaHorta();
 
       const badge = document.getElementById("geralBadgeEstado");
@@ -684,14 +701,15 @@
       const grid = document.getElementById("geralResumoModulos");
       grid.innerHTML = MODULOS_CONFIG.map((m) => {
         const st = estadoModulos[m.id];
-        const statusTexto = st.umidade === null
-          ? "Sem leitura"
+        const online = moduloEstaAtivo(st, agora);
+        const statusTexto = !online
+          ? "Sem sinal (desconectado)"
           : (st.umidade < st.limite ? "Abaixo do mínimo" : "Hidratado");
         return `
           <div class="modulo-mini-card">
             <div class="modulo-mini-top">
-              <span>🌱 ${st.nome}</span>
-              <span class="pill-mini ${st.rele ? "on" : "off"}">${st.rele ? "Irrigando" : "Em espera"}</span>
+              <span>🌱 ${st.nome} (${online ? "Online" : "Offline"})</span>
+              <span class="pill-mini ${online && st.rele ? "on" : "off"}">${online && st.rele ? "Irrigando" : "Em espera"}</span>
             </div>
             <div>Umidade atual: <strong>${st.umidade !== null ? st.umidade + "%" : "--%"}</strong> (Mínimo: ${st.limite}%)</div>
             <div style="font-size: 0.82rem; color: #6b7280;">Situação: ${statusTexto} • Última rega: ${st.ultimaIrrigacao}</div>
@@ -703,12 +721,13 @@
     function atualizarTelaDoModuloAtivo() {
       if (abaAtiva === "geral") return;
       const st = estadoModulos[abaAtiva];
+      const online = moduloEstaAtivo(st);
 
       document.getElementById("umidadeAtual").textContent = st.umidade !== null ? `${st.umidade}%` : "--%";
 
       const badge = document.getElementById("estadoRele");
-      badge.textContent = st.rele ? "LIGADA" : "DESLIGADA";
-      badge.className = st.rele ? "badge on" : "badge";
+      badge.textContent = (online && st.rele) ? "LIGADA" : "DESLIGADA";
+      badge.className = (online && st.rele) ? "badge on" : "badge";
 
       document.getElementById("ultimaIrrigacao").textContent =
         `Indica se a água está ligada agora. Última rega: ${st.ultimaIrrigacao}`;
@@ -744,15 +763,18 @@
     }
 
     function montarContextoHortaParaIA() {
+      const agora = Date.now();
       const est = calcularEstimativaHorta();
       const linhasModulos = MODULOS_CONFIG.map((m) => {
         const st = estadoModulos[m.id];
-        return `- ${st.nome}: umidade atual = ${st.umidade !== null ? st.umidade + "%" : "sem dados"}, umidade mínima configurada = ${st.limite}%, intervalo de verificação = ${st.intervalo} min, duração da rega = ${st.duracao} s, relé agora = ${st.rele ? "LIGADO" : "DESLIGADO"}, última rega = ${st.ultimaIrrigacao}.`;
+        const online = moduloEstaAtivo(st, agora);
+        return `- ${st.nome} (${online ? "Online" : "Sem sinal/desconectado"}): umidade atual = ${st.umidade !== null ? st.umidade + "%" : "sem dados"}, umidade mínima configurada = ${st.limite}%, intervalo de verificação = ${st.intervalo} min, duração da rega = ${st.duracao} s, relé agora = ${online && st.rele ? "LIGADO" : "DESLIGADO"}, última rega = ${st.ultimaIrrigacao}.`;
       }).join("\n");
 
       return `Dados em tempo real do sistema de irrigação automatizada DiodoFarm:
 Estado geral estimado: ${est.rotulo} (${est.descricao})
 Umidade média: ${est.media !== null ? est.media + "%" : "indisponível"}
+Módulos ativos: ${est.ativosCount} de ${MODULOS_CONFIG.length}
 Detalhes por módulo:
 ${linhasModulos}`;
     }
@@ -871,6 +893,10 @@ Pergunta do usuário: ${pergunta}`;
       const st = estadoModulos[modId];
       if (!st) return;
 
+      if (subtopico === "umidade" || subtopico === "hora" || subtopico === "rele") {
+        st.ultimaAtualizacaoMs = Date.now();
+      }
+
       if (subtopico === "hora") {
         st.hora = msg;
       } else if (subtopico === "rele") {
@@ -918,6 +944,15 @@ Pergunta do usuário: ${pergunta}`;
         atualizarTelaDoModuloAtivo();
       }
     });
+
+    setInterval(() => {
+      renderizarAbas();
+      if (abaAtiva === "geral") {
+        atualizarTelaGeral();
+      } else {
+        atualizarTelaDoModuloAtivo();
+      }
+    }, 2000);
 
     function salvarLimite() {
       if (abaAtiva === "geral") return;
