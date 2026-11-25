@@ -377,3 +377,586 @@
     <div id="viewGeral" style="display: flex; flex-direction: column; gap: 18px;">
       <div class="cards">
         <div class="card">
+          <div class="card-title">Estado Geral da Horta</div>
+          <div id="geralBadgeEstado" class="badge aguardando">AGUARDANDO DADOS</div>
+          <p id="geralDescricaoEstado" class="card-desc">Aguardando leituras dos sensores da horta.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Umidade Média da Horta</div>
+          <div id="geralUmidadeMedia" class="humidity-value">--%</div>
+          <p class="card-desc">Média atual de umidade entre os módulos ativos.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Módulos Ativos</div>
+          <div id="geralModulosAtivos" class="humidity-value" style="color: #0b3b1e;">0 / 2</div>
+          <p class="card-desc">Sensores enviando telemetria neste momento.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Irrigação na Horta</div>
+          <div id="geralSetoresRegando" class="badge">NENHUM REGANDO</div>
+          <p class="card-desc">Quantidade de canteiros com água ligada agora.</p>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2>🌿 Panorama por Canteiro / Módulo</h2>
+            <p>Comparativo rápido da situação de cada módulo conectado ao Gateway.</p>
+          </div>
+        </div>
+        <div id="geralResumoModulos" class="modulos-resumo-grid"></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2>✨ Assistente Inteligente da Horta (Gemini IA)</h2>
+            <p>Diagnóstico automático sobre o estado da horta, recomendações de manejo e perguntas livres.</p>
+          </div>
+          <button id="btnAnalisarHorta" class="btn-primary" onclick="analisarHortaComGemini()">
+            Analisar Estado da Horta
+          </button>
+        </div>
+
+        <div id="aiRespostaBox" class="ai-output-box">Clique em "Analisar Estado da Horta" para receber recomendações baseadas nos dados ao vivo dos seus sensores, ou faça uma pergunta abaixo.</div>
+
+        <div class="ai-ask-bar">
+          <input type="text" id="aiPerguntaInput" placeholder="Pergunte algo sobre a horta (ex: A umidade está boa para alface? Preciso ajustar o limite?)" onkeydown="if(event.key==='Enter') perguntarParaGemini()" />
+          <button id="btnPerguntarIA" class="btn-primary" onclick="perguntarParaGemini()">Perguntar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISÃO 2: ABA INDIVIDUAL DE CADA MÓDULO -->
+    <div id="viewModulo" class="hidden" style="display: flex; flex-direction: column; gap: 18px;">
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Umidade do Solo</div>
+          <div id="umidadeAtual" class="humidity-value">--%</div>
+          <p class="card-desc">Nível atual de água medido na terra das plantas.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Irrigação</div>
+          <div id="estadoRele" class="badge">DESLIGADA</div>
+          <p id="ultimaIrrigacao" class="card-desc">Indica se a água está ligada agora. Última rega: --:--:--</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Umidade Mínima (%)</div>
+          <div class="input-group">
+            <input type="number" id="inputLimite" min="0" max="100" value="30" />
+            <button onclick="salvarLimite()">Salvar</button>
+          </div>
+          <p class="card-desc">A rega liga automaticamente quando a umidade ficar abaixo deste valor.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Tempo entre Verificações (min)</div>
+          <div class="input-group">
+            <input type="number" id="inputIntervalo" min="0" max="1440" value="0" />
+            <button onclick="salvarIntervalo()">Salvar</button>
+          </div>
+          <p class="card-desc">De quantos em quantos minutos o solo é verificado (0 = contínuo).</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Duração da Rega (seg)</div>
+          <div class="input-group">
+            <input type="number" id="inputDuracao" min="0" max="3600" value="10" />
+            <button onclick="salvarDuracao()">Salvar</button>
+          </div>
+          <p class="card-desc">Por quantos segundos a água fica ligada cada vez que irrigar (0 = até umedecer).</p>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 id="tituloGrafico">📈 Umidade pelo Tempo — Módulo 1</h2>
+            <p>Acompanhe como a umidade do solo varia ao longo das medições deste módulo.</p>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="graficoUmidade"></canvas>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 id="tituloTabela">📋 Últimas 10 Medições — Módulo 1</h2>
+            <p>Histórico recente com horário, umidade registrada e situação da irrigação.</p>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Horário</th>
+                <th>Umidade Medida</th>
+                <th>Umidade Mínima</th>
+                <th>Irrigação</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaMedicoes">
+              <tr>
+                <td colspan="4" class="empty-row">Aguardando as primeiras medições...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GEMINI_API_KEY_PADRAO = "AQ.Ab8RN6IHovw0TTl5uGm3R_nbnnUw7ozKyon-TjM1YBJnPq8Ngg";
+
+    const MODULOS_CONFIG = [
+      { id: 1, nome: "Módulo 1" },
+      { id: 2, nome: "Módulo 2" }
+    ];
+
+    const estadoModulos = {};
+    MODULOS_CONFIG.forEach((m) => {
+      estadoModulos[m.id] = {
+        id: m.id,
+        nome: m.nome,
+        umidade: null,
+        rele: false,
+        hora: "",
+        ultimaIrrigacao: "--:--:--",
+        limite: 30,
+        intervalo: 0,
+        duracao: 10,
+        labels: [],
+        dadosGrafico: [],
+        historico: []
+      };
+    });
+
+    let abaAtiva = "geral";
+
+    const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt", {
+      clientId: "DiodoFarmGeral_" + Math.random().toString(16).substring(2, 10),
+      clean: true,
+      reconnectPeriod: 3000
+    });
+
+    const ctx = document.getElementById("graficoUmidade").getContext("2d");
+    const grafico = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Umidade (%)",
+          data: [],
+          borderColor: "#16a34a",
+          backgroundColor: "rgba(22, 163, 74, 0.12)",
+          fill: true,
+          borderWidth: 2,
+          pointRadius: 4,
+          tension: 0.25
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: "Horário" } },
+          y: { min: 0, max: 100, ticks: { stepSize: 10 }, title: { display: true, text: "Umidade (%)" } }
+        }
+      }
+    });
+
+    function calcularEstimativaHorta() {
+      const ativos = MODULOS_CONFIG.map((m) => estadoModulos[m.id]).filter((st) => st.umidade !== null);
+      if (ativos.length === 0) {
+        return {
+          classe: "aguardando",
+          rotulo: "AGUARDANDO DADOS",
+          descricao: "Aguardando leituras dos sensores da horta.",
+          media: null,
+          ativosCount: 0,
+          regandoCount: 0
+        };
+      }
+
+      const soma = ativos.reduce((acc, st) => acc + st.umidade, 0);
+      const media = Math.round(soma / ativos.length);
+      const regandoCount = ativos.filter((st) => st.rele).length;
+      const abaixoLimiteCount = ativos.filter((st) => st.umidade < st.limite).length;
+
+      let classe = "bom";
+      let rotulo = "BOM";
+      let descricao = "Umidade adequada e dentro da faixa esperada para o cultivo.";
+
+      if (abaixoLimiteCount === ativos.length || media < 25) {
+        classe = "ruim";
+        rotulo = "RUIM (SOLO SECO)";
+        descricao = "Todos os setores ativos estão com umidade baixa e precisam de irrigação.";
+      } else if (abaixoLimiteCount > 0 || media < 40) {
+        classe = "medio";
+        rotulo = "MÉDIO (ATENÇÃO)";
+        descricao = "Pelo menos um canteiro está abaixo do limite mínimo ou próximo de secar.";
+      } else if (media >= 50 && media <= 85 && abaixoLimiteCount === 0) {
+        classe = "otimo";
+        rotulo = "ÓTIMO";
+        descricao = "Todos os canteiros estão bem hidratados e equilibrados.";
+      }
+
+      return {
+        classe,
+        rotulo,
+        descricao,
+        media,
+        ativosCount: ativos.length,
+        regandoCount
+      };
+    }
+
+    function renderizarAbas() {
+      const tabsBar = document.getElementById("tabsBar");
+      const est = calcularEstimativaHorta();
+      const pillGeral = est.media !== null ? `${est.media}%` : "Geral";
+
+      let html = `
+        <button class="tab-btn ${abaAtiva === "geral" ? "active" : ""}" onclick="selecionarAba('geral')">
+          🏡 Visão Geral da Horta
+          <span class="tab-umid-pill">${pillGeral}</span>
+        </button>
+      `;
+
+      html += MODULOS_CONFIG.map((m) => {
+        const st = estadoModulos[m.id];
+        const umidTexto = st.umidade !== null ? `${st.umidade}%` : "--%";
+        return `
+          <button class="tab-btn ${abaAtiva === m.id ? "active" : ""}" onclick="selecionarAba(${m.id})">
+            🌱 ${m.nome}
+            <span class="tab-umid-pill">${umidTexto}</span>
+          </button>
+        `;
+      }).join("");
+
+      tabsBar.innerHTML = html;
+    }
+
+    function selecionarAba(alvo) {
+      abaAtiva = alvo;
+      renderizarAbas();
+
+      if (abaAtiva === "geral") {
+        document.getElementById("viewGeral").classList.remove("hidden");
+        document.getElementById("viewModulo").classList.add("hidden");
+        atualizarTelaGeral();
+      } else {
+        document.getElementById("viewGeral").classList.add("hidden");
+        document.getElementById("viewModulo").classList.remove("hidden");
+        atualizarTelaDoModuloAtivo();
+      }
+    }
+
+    function atualizarTelaGeral() {
+      const est = calcularEstimativaHorta();
+
+      const badge = document.getElementById("geralBadgeEstado");
+      badge.textContent = est.rotulo;
+      badge.className = `badge ${est.classe}`;
+
+      document.getElementById("geralDescricaoEstado").textContent = est.descricao;
+      document.getElementById("geralUmidadeMedia").textContent = est.media !== null ? `${est.media}%` : "--%";
+      document.getElementById("geralModulosAtivos").textContent = `${est.ativosCount} / ${MODULOS_CONFIG.length}`;
+
+      const badgeRega = document.getElementById("geralSetoresRegando");
+      if (est.regandoCount > 0) {
+        badgeRega.textContent = `${est.regandoCount} REGANDO AGORA`;
+        badgeRega.className = "badge on";
+      } else {
+        badgeRega.textContent = "NENHUM REGANDO";
+        badgeRega.className = "badge";
+      }
+
+      const grid = document.getElementById("geralResumoModulos");
+      grid.innerHTML = MODULOS_CONFIG.map((m) => {
+        const st = estadoModulos[m.id];
+        const statusTexto = st.umidade === null
+          ? "Sem leitura"
+          : (st.umidade < st.limite ? "Abaixo do mínimo" : "Hidratado");
+        return `
+          <div class="modulo-mini-card">
+            <div class="modulo-mini-top">
+              <span>🌱 ${st.nome}</span>
+              <span class="pill-mini ${st.rele ? "on" : "off"}">${st.rele ? "Irrigando" : "Em espera"}</span>
+            </div>
+            <div>Umidade atual: <strong>${st.umidade !== null ? st.umidade + "%" : "--%"}</strong> (Mínimo: ${st.limite}%)</div>
+            <div style="font-size: 0.82rem; color: #6b7280;">Situação: ${statusTexto} • Última rega: ${st.ultimaIrrigacao}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function atualizarTelaDoModuloAtivo() {
+      if (abaAtiva === "geral") return;
+      const st = estadoModulos[abaAtiva];
+
+      document.getElementById("umidadeAtual").textContent = st.umidade !== null ? `${st.umidade}%` : "--%";
+
+      const badge = document.getElementById("estadoRele");
+      badge.textContent = st.rele ? "LIGADA" : "DESLIGADA";
+      badge.className = st.rele ? "badge on" : "badge";
+
+      document.getElementById("ultimaIrrigacao").textContent =
+        `Indica se a água está ligada agora. Última rega: ${st.ultimaIrrigacao}`;
+
+      document.getElementById("inputLimite").value = st.limite;
+      document.getElementById("inputIntervalo").value = st.intervalo;
+      document.getElementById("inputDuracao").value = st.duracao;
+
+      document.getElementById("tituloGrafico").textContent = `📈 Umidade pelo Tempo — ${st.nome}`;
+      document.getElementById("tituloTabela").textContent = `📋 Últimas 10 Medições — ${st.nome}`;
+
+      grafico.data.labels = [...st.labels];
+      grafico.data.datasets[0].data = [...st.dadosGrafico];
+      grafico.update();
+
+      const tbody = document.getElementById("tabelaMedicoes");
+      if (st.historico.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Aguardando as primeiras medições do ${st.nome}...</td></tr>`;
+      } else {
+        tbody.innerHTML = st.historico.map((item) => `
+          <tr>
+            <td>${item.horario}</td>
+            <td><strong>${item.umidade}%</strong></td>
+            <td>${item.limite}%</td>
+            <td>
+              <span class="pill-mini ${item.irrigando ? "on" : "off"}">
+                ${item.irrigando ? "Ligada" : "Desligada"}
+              </span>
+            </td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    function montarContextoHortaParaIA() {
+      const est = calcularEstimativaHorta();
+      const linhasModulos = MODULOS_CONFIG.map((m) => {
+        const st = estadoModulos[m.id];
+        return `- ${st.nome}: umidade atual = ${st.umidade !== null ? st.umidade + "%" : "sem dados"}, umidade mínima configurada = ${st.limite}%, intervalo de verificação = ${st.intervalo} min, duração da rega = ${st.duracao} s, relé agora = ${st.rele ? "LIGADO" : "DESLIGADO"}, última rega = ${st.ultimaIrrigacao}.`;
+      }).join("\n");
+
+      return `Dados em tempo real do sistema de irrigação automatizada DiodoFarm:
+Estado geral estimado: ${est.rotulo} (${est.descricao})
+Umidade média: ${est.media !== null ? est.media + "%" : "indisponível"}
+Detalhes por módulo:
+${linhasModulos}`;
+    }
+
+    async function chamarGeminiAPI(promptUsuario) {
+      const outputBox = document.getElementById("aiRespostaBox");
+      const btnAnalisar = document.getElementById("btnAnalisarHorta");
+      const btnPerguntar = document.getElementById("btnPerguntarIA");
+
+      const chave = GEMINI_API_KEY_PADRAO.trim();
+      if (!chave) {
+        outputBox.textContent = "Nenhuma chave API configurada em GEMINI_API_KEY_PADRAO.";
+        return;
+      }
+
+      btnAnalisar.disabled = true;
+      btnPerguntar.disabled = true;
+      outputBox.textContent = "Consultando o Gemini com os dados atuais da horta...";
+
+      const modelos = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+      let ultimoErro = "";
+
+      for (const modelo of modelos) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${encodeURIComponent(chave)}`;
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": chave
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: promptUsuario }]
+              }]
+            })
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            ultimoErro = data.error?.message || `Erro HTTP ${response.status}`;
+            continue;
+          }
+
+          const textoResposta = data.candidates?.[0]?.content?.parts?.[0]?.text || "Nenhuma resposta retornada.";
+          outputBox.textContent = textoResposta;
+          btnAnalisar.disabled = false;
+          btnPerguntar.disabled = false;
+          return;
+        } catch (err) {
+          ultimoErro = err.message;
+        }
+      }
+
+      outputBox.textContent = `Erro ao consultar o Gemini: ${ultimoErro}`;
+      btnAnalisar.disabled = false;
+      btnPerguntar.disabled = false;
+    }
+
+    function analisarHortaComGemini() {
+      const contexto = montarContextoHortaParaIA();
+      const prompt = `Você é um agrônomo especialista em hortas automatizadas e IoT. Analise os dados ao vivo abaixo e responda de forma direta e prática em português:
+1. Avaliação do estado atual da horta e de cada módulo.
+2. O que fazer agora (se algum limite, intervalo ou duração de rega precisa ser ajustado).
+3. Cuidados preventivos recomendados.
+
+${contexto}`;
+      chamarGeminiAPI(prompt);
+    }
+
+    function perguntarParaGemini() {
+      const input = document.getElementById("aiPerguntaInput");
+      const pergunta = input.value.trim();
+      if (!pergunta) return;
+
+      const contexto = montarContextoHortaParaIA();
+      const prompt = `Você é um assistente especialista em hortas automatizadas. Responda à pergunta do usuário levando em conta os dados atuais da horta dele:
+
+${contexto}
+
+Pergunta do usuário: ${pergunta}`;
+      input.value = "";
+      chamarGeminiAPI(prompt);
+    }
+
+    client.on("connect", () => {
+      document.getElementById("statusDot").className = "dot online";
+      document.getElementById("statusText").textContent = "Conectado";
+
+      MODULOS_CONFIG.forEach((m) => {
+        const p = `meuprojeto_estufa/modulo${m.id}`;
+        client.subscribe([
+          `${p}/umidade`,
+          `${p}/rele`,
+          `${p}/hora`,
+          `${p}/ultima_irrigacao`,
+          `${p}/config/limite_ativo`,
+          `${p}/config/intervalo_ativo`,
+          `${p}/config/duracao_ativa`
+        ]);
+      });
+    });
+
+    client.on("offline", () => {
+      document.getElementById("statusDot").className = "dot offline";
+      document.getElementById("statusText").textContent = "Desconectado";
+    });
+
+    client.on("message", (topic, payload) => {
+      const msg = payload.toString().trim();
+      const match = topic.match(/^meuprojeto_estufa\/modulo(\d+)\/(.+)$/);
+      if (!match) return;
+
+      const modId = parseInt(match[1], 10);
+      const subtopico = match[2];
+      const st = estadoModulos[modId];
+      if (!st) return;
+
+      if (subtopico === "hora") {
+        st.hora = msg;
+      } else if (subtopico === "rele") {
+        st.rele = (msg === "1");
+      } else if (subtopico === "ultima_irrigacao") {
+        st.ultimaIrrigacao = msg;
+      } else if (subtopico === "config/limite_ativo") {
+        const val = parseInt(msg, 10);
+        if (!isNaN(val)) st.limite = val;
+      } else if (subtopico === "config/intervalo_ativo") {
+        const val = parseInt(msg, 10);
+        if (!isNaN(val)) st.intervalo = val;
+      } else if (subtopico === "config/duracao_ativa") {
+        const val = parseInt(msg, 10);
+        if (!isNaN(val)) st.duracao = val;
+      } else if (subtopico === "umidade") {
+        const valor = parseInt(msg, 10);
+        if (isNaN(valor)) return;
+
+        st.umidade = valor;
+        const horarioRegistro = st.hora || new Date().toLocaleTimeString("pt-BR");
+
+        st.labels.push(horarioRegistro);
+        st.dadosGrafico.push(valor);
+        if (st.labels.length > 25) {
+          st.labels.shift();
+          st.dadosGrafico.shift();
+        }
+
+        st.historico.unshift({
+          horario: horarioRegistro,
+          umidade: valor,
+          limite: st.limite,
+          irrigando: valor < st.limite || st.rele
+        });
+        if (st.historico.length > 10) {
+          st.historico.pop();
+        }
+      }
+
+      renderizarAbas();
+      if (abaAtiva === "geral") {
+        atualizarTelaGeral();
+      } else if (modId === abaAtiva) {
+        atualizarTelaDoModuloAtivo();
+      }
+    });
+
+    function salvarLimite() {
+      if (abaAtiva === "geral") return;
+      const input = document.getElementById("inputLimite");
+      let val = parseInt(input.value, 10);
+      if (isNaN(val)) val = 30;
+      val = Math.max(0, Math.min(100, val));
+      input.value = val;
+      estadoModulos[abaAtiva].limite = val;
+
+      client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/limite`, String(val), { retain: true });
+    }
+
+    function salvarIntervalo() {
+      if (abaAtiva === "geral") return;
+      const input = document.getElementById("inputIntervalo");
+      let val = parseInt(input.value, 10);
+      if (isNaN(val)) val = 0;
+      val = Math.max(0, Math.min(1440, val));
+      input.value = val;
+      estadoModulos[abaAtiva].intervalo = val;
+
+      client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/intervalo_min`, String(val), { retain: true });
+    }
+
+    function salvarDuracao() {
+      if (abaAtiva === "geral") return;
+      const input = document.getElementById("inputDuracao");
+      let val = parseInt(input.value, 10);
+      if (isNaN(val)) val = 10;
+      val = Math.max(0, Math.min(3600, val));
+      input.value = val;
+      estadoModulos[abaAtiva].duracao = val;
+
+      client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/duracao_seg`, String(val), { retain: true });
+    }
+
+    renderizarAbas();
+    selecionarAba("geral");
+  </script>
+</body>
+</html>
