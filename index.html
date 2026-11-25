@@ -3,369 +3,478 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controle de Irrigação - Estufa IoT</title>
+  <title>Monitoramento e Irrigação da Estufa</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --border: #334155;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --primary: #10b981;
-      --primary-hover: #059669;
-      --warn: #f59e0b;
-      --danger: #ef4444;
-    }
-
     * {
       box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     body {
       margin: 0;
       padding: 24px 16px;
-      background: var(--bg);
-      color: var(--text);
+      background-color: #f3f4f6;
+      color: #111827;
       display: flex;
       justify-content: center;
     }
 
     .container {
       width: 100%;
-      max-width: 780px;
+      max-width: 1040px;
       display: flex;
       flex-direction: column;
       gap: 20px;
     }
 
-    header {
+    .topbar {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 18px 24px;
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px 22px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
-    header h1 {
+    .topbar h1 {
       margin: 0;
-      font-size: 1.3rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .status-pill {
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 0.85rem;
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
       font-weight: 600;
-      background: #334155;
-      color: var(--muted);
+      color: #374151;
     }
 
-    .status-pill.online {
-      background: rgba(16, 185, 129, 0.16);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #9ca3af;
     }
 
-    .status-pill.offline {
-      background: rgba(239, 68, 68, 0.16);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.4);
+    .dot.online {
+      background-color: #10b981;
     }
 
-    .grid-telemetry {
+    .dot.offline {
+      background-color: #ef4444;
+    }
+
+    .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+      gap: 18px;
     }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px;
-    }
-
-    .metric-label {
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .metric-value {
-      font-size: 1.65rem;
-      font-weight: 700;
-    }
-
-    .metric-sub {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-
-    .rele-on {
-      color: #34d399;
-    }
-
-    .rele-off {
-      color: #94a3b8;
-    }
-
-    .controls-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 16px;
-    }
-
-    .control-group h2 {
-      margin: 0 0 6px 0;
-      font-size: 1.05rem;
-    }
-
-    .control-group p {
-      margin: 0 0 14px 0;
-      font-size: 0.86rem;
-      color: var(--muted);
-      line-height: 1.4;
-    }
-
-    .input-row {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
       display: flex;
-      gap: 10px;
+      flex-direction: column;
       align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      gap: 10px;
     }
 
-    input[type="number"] {
-      flex: 1;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #0f172a;
-      color: var(--text);
-      font-size: 1rem;
-    }
-
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 10px;
-      background: var(--primary);
-      color: #052e16;
+    .card-title {
+      font-size: 0.85rem;
       font-weight: 700;
-      font-size: 0.92rem;
-      cursor: pointer;
-      transition: background 0.15s ease;
+      color: #374151;
     }
 
-    button:hover {
-      background: var(--primary-hover);
+    .humidity-value {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #16a34a;
+      line-height: 1.1;
     }
 
-    .presets {
+    .card-desc {
+      font-size: 0.82rem;
+      color: #6b7280;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .badge {
+      padding: 8px 22px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #ffffff;
+      background-color: #ef4444;
+    }
+
+    .badge.on {
+      background-color: #16a34a;
+    }
+
+    .input-group {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
+      width: 100%;
+      max-width: 230px;
     }
 
-    .preset-btn {
-      padding: 6px 10px;
-      font-size: 0.8rem;
+    .input-group input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #d1d5db;
+      border-right: none;
+      border-radius: 6px 0 0 6px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .input-group button {
+      padding: 9px 16px;
+      border: none;
+      border-radius: 0 6px 6px 0;
+      background-color: #16a34a;
+      color: #ffffff;
       font-weight: 600;
-      background: #0f172a;
-      color: var(--text);
-      border: 1px solid var(--border);
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
     }
 
-    .preset-btn:hover {
-      background: #334155;
+    .input-group button:hover {
+      background-color: #15803d;
     }
 
-    .feedback {
+    .section-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .section-header {
+      margin-bottom: 14px;
+    }
+
+    .section-header h2 {
+      margin: 0 0 4px 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .section-header p {
+      margin: 0;
       font-size: 0.84rem;
-      color: #34d399;
-      min-height: 1.2em;
-      margin-top: 10px;
+      color: #6b7280;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+      width: 100%;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background-color: #f9fafb;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .pill-mini {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .pill-mini.on {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    .pill-mini.off {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .empty-row {
+      text-align: center;
+      color: #6b7280;
+      padding: 20px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <div>
-        <h1>Estufa IoT — Irrigação Sincronizada por RTC</h1>
-        <div class="metric-sub">Broker: broker.hivemq.com | Tópico base: meuprojeto_estufa</div>
+    <div class="topbar">
+      <h1>🌱 Irrigação Inteligente da Estufa</h1>
+      <div class="status">
+        <span id="statusDot" class="dot"></span>
+        <span id="statusText">Conectando...</span>
       </div>
-      <div id="mqttStatus" class="status-pill">Conectando ao MQTT...</div>
-    </header>
+    </div>
 
-    <section class="grid-telemetry">
+    <div class="cards">
       <div class="card">
-        <div class="metric-label">Umidade do Solo</div>
-        <div id="valorUmidade" class="metric-value">-- %</div>
-        <div class="metric-sub">Leitura em tempo real (GPIO 0)</div>
-      </div>
-
-      <div class="card">
-        <div class="metric-label">Estado do Relé (GPIO 10)</div>
-        <div id="estadoRele" class="metric-value rele-off">--</div>
-        <div id="infoUltimaIrrigacao" class="metric-sub">Última irrigação: --:--:--</div>
+        <div class="card-title">Umidade do Solo</div>
+        <div id="umidadeAtual" class="humidity-value">--%</div>
+        <p class="card-desc">Nível atual de água medido na terra das plantas.</p>
       </div>
 
       <div class="card">
-        <div class="metric-label">Horário Sincronizado (RTC)</div>
-        <div id="horaRtc" class="metric-value">--:--:--</div>
-        <div class="metric-sub">Relógio DS1307 do Gateway</div>
+        <div class="card-title">Irrigação</div>
+        <div id="estadoRele" class="badge">DESLIGADA</div>
+        <p id="ultimaIrrigacao" class="card-desc">Indica se a água está ligada agora. Última rega: --:--:--</p>
       </div>
 
       <div class="card">
-        <div class="metric-label">Regras Ativas no Sensor</div>
-        <div id="regrasAtivas" class="metric-value" style="font-size: 1.25rem;">--% | -- min</div>
-        <div class="metric-sub">Limite mínimo | Intervalo RTC</div>
-      </div>
-    </section>
-
-    <section class="controls-grid">
-      <div class="card control-group">
-        <h2>Limite de Umidade (%)</h2>
-        <p>O relé só liga se a umidade medida estiver abaixo deste valor (0% a 100%).</p>
-        <div class="input-row">
+        <div class="card-title">Umidade Mínima (%)</div>
+        <div class="input-group">
           <input type="number" id="inputLimite" min="0" max="100" value="30" />
-          <button onclick="enviarLimite()">Aplicar Limite</button>
+          <button onclick="salvarLimite()">Salvar</button>
         </div>
-        <div id="feedbackLimite" class="feedback"></div>
+        <p class="card-desc">A rega liga automaticamente quando a umidade ficar abaixo deste valor.</p>
       </div>
 
-      <div class="card control-group">
-        <h2>Intervalo entre Irrigações (minutos)</h2>
-        <p>Define o tempo mínimo (baseado no horário do RTC) entre o início de uma irrigação e a próxima. Use <b>0</b> para sem bloqueio de tempo.</p>
-        <div class="input-row">
+      <div class="card">
+        <div class="card-title">Tempo entre Verificações (min)</div>
+        <div class="input-group">
           <input type="number" id="inputIntervalo" min="0" max="1440" value="0" />
-          <button onclick="enviarIntervalo()">Aplicar Intervalo</button>
+          <button onclick="salvarIntervalo()">Salvar</button>
         </div>
-        <div class="presets">
-          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(0)">Sem pausa (0 min)</button>
-          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(5)">5 min</button>
-          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(15)">15 min</button>
-          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(30)">30 min</button>
-          <button type="button" class="preset-btn" onclick="definirPresetIntervalo(60)">1 hora</button>
-        </div>
-        <div id="feedbackIntervalo" class="feedback"></div>
+        <p class="card-desc">Define de quantos em quantos minutos o solo é verificado (0 = contínuo).</p>
       </div>
-    </section>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>📈 Umidade pelo Tempo</h2>
+        <p>Acompanhe como a umidade do solo varia ao longo das medições.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="graficoUmidade"></canvas>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2>📋 Últimas 10 Medições</h2>
+        <p>Histórico recente com horário, umidade registrada e situação da irrigação.</p>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Horário</th>
+              <th>Umidade Medida</th>
+              <th>Umidade Mínima</th>
+              <th>Irrigação</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaMedicoes">
+            <tr>
+              <td colspan="4" class="empty-row">Aguardando as primeiras medições...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script>
-    const BROKER_URL = "wss://broker.hivemq.com:8884/mqtt";
-
-    const TOPICOS = {
-      umidade: "meuprojeto_estufa/umidade",
-      rele: "meuprojeto_estufa/rele",
-      hora: "meuprojeto_estufa/hora",
-      ultimaIrrigacao: "meuprojeto_estufa/ultima_irrigacao",
-      limiteCfg: "meuprojeto_estufa/config/limite",
-      limiteAtivo: "meuprojeto_estufa/config/limite_ativo",
-      intervaloCfg: "meuprojeto_estufa/config/intervalo_min",
-      intervaloAtivo: "meuprojeto_estufa/config/intervalo_ativo"
-    };
-
-    let limiteAtivoAtual = "--";
-    let intervaloAtivoAtual = "--";
-
-    const clientId = "EstufaWeb_" + Math.random().toString(16).substring(2, 10);
-    const client = mqtt.connect(BROKER_URL, {
-      clientId,
+    const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt", {
+      clientId: "EstufaPainel_" + Math.random().toString(16).substring(2, 10),
       clean: true,
-      connectTimeout: 5000,
       reconnectPeriod: 3000
     });
 
-    const statusEl = document.getElementById("mqttStatus");
+    const ctx = document.getElementById("graficoUmidade").getContext("2d");
+    const grafico = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Umidade (%)",
+          data: [],
+          borderColor: "#16a34a",
+          backgroundColor: "rgba(22, 163, 74, 0.12)",
+          fill: true,
+          borderWidth: 2,
+          pointRadius: 4,
+          tension: 0.25
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Horário"
+            }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { stepSize: 10 },
+            title: {
+              display: true,
+              text: "Umidade (%)"
+            }
+          }
+        }
+      }
+    });
+
+    let horaAtual = "";
+    let limiteAtivo = 30;
+    let releAtivo = false;
+    const historicoMedicoes = [];
 
     client.on("connect", () => {
-      statusEl.textContent = "Conectado ao HiveMQ";
-      statusEl.className = "status-pill online";
+      document.getElementById("statusDot").className = "dot online";
+      document.getElementById("statusText").textContent = "Conectado";
 
       client.subscribe([
-        TOPICOS.umidade,
-        TOPICOS.rele,
-        TOPICOS.hora,
-        TOPICOS.ultimaIrrigacao,
-        TOPICOS.limiteAtivo,
-        TOPICOS.intervaloAtivo
+        "meuprojeto_estufa/umidade",
+        "meuprojeto_estufa/rele",
+        "meuprojeto_estufa/hora",
+        "meuprojeto_estufa/ultima_irrigacao",
+        "meuprojeto_estufa/config/limite_ativo",
+        "meuprojeto_estufa/config/intervalo_ativo"
       ]);
     });
 
-    client.on("reconnect", () => {
-      statusEl.textContent = "Reconectando...";
-      statusEl.className = "status-pill";
-    });
-
     client.on("offline", () => {
-      statusEl.textContent = "Desconectado";
-      statusEl.className = "status-pill offline";
+      document.getElementById("statusDot").className = "dot offline";
+      document.getElementById("statusText").textContent = "Desconectado";
     });
 
     client.on("message", (topic, payload) => {
       const msg = payload.toString().trim();
 
-      if (topic === TOPICOS.umidade) {
-        document.getElementById("valorUmidade").textContent = `${msg} %`;
-      } else if (topic === TOPICOS.rele) {
-        const releEl = document.getElementById("estadoRele");
-        const ligado = msg === "1";
-        releEl.textContent = ligado ? "LIGADO" : "DESLIGADO";
-        releEl.className = ligado ? "metric-value rele-on" : "metric-value rele-off";
-      } else if (topic === TOPICOS.hora) {
-        document.getElementById("horaRtc").textContent = msg;
-      } else if (topic === TOPICOS.ultimaIrrigacao) {
-        document.getElementById("infoUltimaIrrigacao").textContent = `Última irrigação: ${msg}`;
-      } else if (topic === TOPICOS.limiteAtivo) {
-        limiteAtivoAtual = msg;
-        atualizarResumoRegras();
-      } else if (topic === TOPICOS.intervaloAtivo) {
-        intervaloAtivoAtual = msg;
-        atualizarResumoRegras();
+      if (topic === "meuprojeto_estufa/hora") {
+        horaAtual = msg;
+      } else if (topic === "meuprojeto_estufa/rele") {
+        releAtivo = (msg === "1");
+        const badge = document.getElementById("estadoRele");
+        badge.textContent = releAtivo ? "LIGADA" : "DESLIGADA";
+        badge.className = releAtivo ? "badge on" : "badge";
+      } else if (topic === "meuprojeto_estufa/ultima_irrigacao") {
+        document.getElementById("ultimaIrrigacao").textContent =
+          `Indica se a água está ligada agora. Última rega: ${msg}`;
+      } else if (topic === "meuprojeto_estufa/config/limite_ativo") {
+        const val = parseInt(msg, 10);
+        if (!isNaN(val)) {
+          limiteAtivo = val;
+          document.getElementById("inputLimite").value = val;
+        }
+      } else if (topic === "meuprojeto_estufa/config/intervalo_ativo") {
+        const val = parseInt(msg, 10);
+        if (!isNaN(val)) {
+          document.getElementById("inputIntervalo").value = val;
+        }
+      } else if (topic === "meuprojeto_estufa/umidade") {
+        const valor = parseInt(msg, 10);
+        if (isNaN(valor)) return;
+
+        document.getElementById("umidadeAtual").textContent = `${valor}%`;
+
+        const horarioRegistro = horaAtual || new Date().toLocaleTimeString("pt-BR");
+
+        // Atualiza o gráfico de umidade pelo tempo
+        grafico.data.labels.push(horarioRegistro);
+        grafico.data.datasets[0].data.push(valor);
+        if (grafico.data.labels.length > 25) {
+          grafico.data.labels.shift();
+          grafico.data.datasets[0].data.shift();
+        }
+        grafico.update();
+
+        // Atualiza a tabela com até 10 medições mais recentes
+        historicoMedicoes.unshift({
+          horario: horarioRegistro,
+          umidade: valor,
+          limite: limiteAtivo,
+          irrigando: valor < limiteAtivo || releAtivo
+        });
+        if (historicoMedicoes.length > 10) {
+          historicoMedicoes.pop();
+        }
+        renderizarTabela();
       }
     });
 
-    function atualizarResumoRegras() {
-      document.getElementById("regrasAtivas").textContent =
-        `${limiteAtivoAtual}% | ${intervaloAtivoAtual} min`;
+    function renderizarTabela() {
+      const tbody = document.getElementById("tabelaMedicoes");
+      tbody.innerHTML = historicoMedicoes.map((item) => `
+        <tr>
+          <td>${item.horario}</td>
+          <td><strong>${item.umidade}%</strong></td>
+          <td>${item.limite}%</td>
+          <td>
+            <span class="pill-mini ${item.irrigando ? "on" : "off"}">
+              ${item.irrigando ? "Ligada" : "Desligada"}
+            </span>
+          </td>
+        </tr>
+      `).join("");
     }
 
-    function enviarLimite() {
+    function salvarLimite() {
       const input = document.getElementById("inputLimite");
       let val = parseInt(input.value, 10);
       if (isNaN(val)) val = 30;
       val = Math.max(0, Math.min(100, val));
       input.value = val;
+      limiteAtivo = val;
 
-      client.publish(TOPICOS.limiteCfg, String(val), { qos: 0, retain: true });
-      document.getElementById("feedbackLimite").textContent =
-        `Limite de ${val}% enviado ao Gateway/Sensor.`;
+      client.publish("meuprojeto_estufa/config/limite", String(val), { retain: true });
     }
 
-    function enviarIntervalo() {
+    function salvarIntervalo() {
       const input = document.getElementById("inputIntervalo");
       let val = parseInt(input.value, 10);
       if (isNaN(val)) val = 0;
       val = Math.max(0, Math.min(1440, val));
       input.value = val;
 
-      client.publish(TOPICOS.intervaloCfg, String(val), { qos: 0, retain: true });
-      document.getElementById("feedbackIntervalo").textContent =
-        `Intervalo de ${val} minuto(s) enviado ao Gateway/Sensor.`;
-    }
-
-    function definirPresetIntervalo(minutos) {
-      document.getElementById("inputIntervalo").value = minutos;
-      enviarIntervalo();
+      client.publish("meuprojeto_estufa/config/intervalo_min", String(val), { retain: true });
     }
   </script>
 </body>
