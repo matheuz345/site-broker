@@ -80,7 +80,7 @@
     .dot.online { background-color: #10b981; }
     .dot.offline { background-color: #ef4444; }
 
-    /* Barra de Abas dos Módulos */
+    /* Barra de Abas */
     .tabs-bar {
       display: flex;
       flex-wrap: wrap;
@@ -128,6 +128,10 @@
       background: rgba(255, 255, 255, 0.25);
     }
 
+    .hidden {
+      display: none !important;
+    }
+
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -154,7 +158,7 @@
     }
 
     .humidity-value {
-      font-size: 2.4rem;
+      font-size: 2.3rem;
       font-weight: 800;
       color: #16a34a;
       line-height: 1.1;
@@ -177,6 +181,11 @@
     }
 
     .badge.on { background-color: #16a34a; }
+    .badge.otimo { background-color: #059669; }
+    .badge.bom { background-color: #16a34a; }
+    .badge.medio { background-color: #d97706; }
+    .badge.ruim { background-color: #dc2626; }
+    .badge.aguardando { background-color: #6b7280; }
 
     .input-group {
       display: flex;
@@ -194,8 +203,8 @@
       outline: none;
     }
 
-    .input-group button {
-      padding: 8px 14px;
+    .input-group button, .btn-primary {
+      padding: 9px 16px;
       border: none;
       border-radius: 0 6px 6px 0;
       background-color: #16a34a;
@@ -206,7 +215,18 @@
       white-space: nowrap;
     }
 
-    .input-group button:hover { background-color: #15803d; }
+    .btn-primary {
+      border-radius: 8px;
+    }
+
+    .input-group button:hover, .btn-primary:hover {
+      background-color: #15803d;
+    }
+
+    .btn-primary:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
 
     .section-card {
       background: #ffffff;
@@ -215,9 +235,90 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
-    .section-header { margin-bottom: 14px; }
+    .section-header {
+      margin-bottom: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
     .section-header h2 { margin: 0 0 4px 0; font-size: 1.05rem; font-weight: 700; }
     .section-header p { margin: 0; font-size: 0.84rem; color: #6b7280; }
+
+    /* Estilos da Visão Geral e Setor Gemini IA */
+    .modulos-resumo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .modulo-mini-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px 16px;
+      background: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .modulo-mini-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      color: #0b3b1e;
+    }
+
+    .api-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+
+    .api-bar input {
+      flex: 1;
+      min-width: 220px;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .ai-output-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 0.93rem;
+      line-height: 1.55;
+      color: #1f2937;
+      white-space: pre-wrap;
+      min-height: 90px;
+    }
+
+    .ai-ask-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .ai-ask-bar input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.93rem;
+    }
 
     .chart-wrapper { position: relative; height: 280px; width: 100%; }
     .table-wrapper { overflow-x: auto; }
@@ -293,87 +394,162 @@
       </div>
     </div>
 
-    <!-- Abas de seleção de módulo -->
+    <!-- Barra de Abas (Visão Geral + Módulos) -->
     <div id="tabsBar" class="tabs-bar"></div>
 
-    <div class="cards">
-      <div class="card">
-        <div class="card-title">Umidade do Solo</div>
-        <div id="umidadeAtual" class="humidity-value">--%</div>
-        <p class="card-desc">Nível atual de água medido na terra das plantas.</p>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Irrigação</div>
-        <div id="estadoRele" class="badge">DESLIGADA</div>
-        <p id="ultimaIrrigacao" class="card-desc">Indica se a água está ligada agora. Última rega: --:--:--</p>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Umidade Mínima (%)</div>
-        <div class="input-group">
-          <input type="number" id="inputLimite" min="0" max="100" value="30" />
-          <button onclick="salvarLimite()">Salvar</button>
+    <!-- ===================================================================== -->
+    <!-- VISÃO 1: ABA GERAL DA HORTA + INTELIGÊNCIA ARTIFICIAL (GEMINI)        -->
+    <!-- ===================================================================== -->
+    <div id="viewGeral" style="display: flex; flex-direction: column; gap: 18px;">
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Estado Geral da Horta</div>
+          <div id="geralBadgeEstado" class="badge aguardando">AGUARDANDO DADOS</div>
+          <p id="geralDescricaoEstado" class="card-desc">Aguardando leituras dos sensores da horta.</p>
         </div>
-        <p class="card-desc">A rega liga automaticamente quando a umidade ficar abaixo deste valor.</p>
+
+        <div class="card">
+          <div class="card-title">Umidade Média da Horta</div>
+          <div id="geralUmidadeMedia" class="humidity-value">--%</div>
+          <p class="card-desc">Média atual de umidade entre os módulos ativos.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Módulos Ativos</div>
+          <div id="geralModulosAtivos" class="humidity-value" style="color: #0b3b1e;">0 / 2</div>
+          <p class="card-desc">Sensores enviando telemetria neste momento.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Irrigação na Horta</div>
+          <div id="geralSetoresRegando" class="badge">NENHUM REGANDO</div>
+          <p class="card-desc">Quantidade de canteiros com água ligada agora.</p>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Tempo entre Verificações (min)</div>
-        <div class="input-group">
-          <input type="number" id="inputIntervalo" min="0" max="1440" value="0" />
-          <button onclick="salvarIntervalo()">Salvar</button>
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2>🌿 Panorama por Canteiro / Módulo</h2>
+            <p>Comparativo rápido da situação de cada módulo conectado ao Gateway.</p>
+          </div>
         </div>
-        <p class="card-desc">De quantos em quantos minutos o solo é verificado (0 = contínuo).</p>
+        <div id="geralResumoModulos" class="modulos-resumo-grid"></div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Duração da Rega (seg)</div>
-        <div class="input-group">
-          <input type="number" id="inputDuracao" min="0" max="3600" value="10" />
-          <button onclick="salvarDuracao()">Salvar</button>
+      <!-- Setor de Inteligência Artificial Integrada (Gemini API) -->
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2>✨ Assistente Inteligente da Horta (Gemini IA)</h2>
+            <p>Diagnóstico automático sobre o estado da horta, recomendações de manejo e perguntas livres.</p>
+          </div>
+          <button id="btnAnalisarHorta" class="btn-primary" onclick="analisarHortaComGemini()">
+            Analisar Estado da Horta
+          </button>
         </div>
-        <p class="card-desc">Por quantos segundos a água fica ligada cada vez que irrigar (0 = até umedecer).</p>
+
+        <div class="api-bar">
+          <strong style="font-size: 0.85rem; color: #0b3b1e;">Chave API Gemini:</strong>
+          <input type="password" id="geminiApiKey" placeholder="Cole sua chave AIza... do Google AI Studio" />
+          <button class="btn-primary" onclick="salvarApiKey()">Salvar Chave</button>
+        </div>
+
+        <div id="aiRespostaBox" class="ai-output-box">Insira sua chave da API do Gemini acima e clique em "Analisar Estado da Horta" para receber recomendações baseadas nos dados ao vivo dos seus sensores, ou faça uma pergunta abaixo.</div>
+
+        <div class="ai-ask-bar">
+          <input type="text" id="aiPerguntaInput" placeholder="Pergunte algo sobre a horta (ex: A umidade está boa para alface? Preciso ajustar o limite?)" onkeydown="if(event.key==='Enter') perguntarParaGemini()" />
+          <button id="btnPerguntarIA" class="btn-primary" onclick="perguntarParaGemini()">Perguntar</button>
+        </div>
       </div>
     </div>
 
-    <div class="section-card">
-      <div class="section-header">
-        <h2 id="tituloGrafico">📈 Umidade pelo Tempo — Módulo 1</h2>
-        <p>Acompanhe como a umidade do solo varia ao longo das medições deste módulo.</p>
-      </div>
-      <div class="chart-wrapper">
-        <canvas id="graficoUmidade"></canvas>
-      </div>
-    </div>
+    <!-- ===================================================================== -->
+    <!-- VISÃO 2: ABA INDIVIDUAL DE CADA MÓDULO                                -->
+    <!-- ===================================================================== -->
+    <div id="viewModulo" class="hidden" style="display: flex; flex-direction: column; gap: 18px;">
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Umidade do Solo</div>
+          <div id="umidadeAtual" class="humidity-value">--%</div>
+          <p class="card-desc">Nível atual de água medido na terra das plantas.</p>
+        </div>
 
-    <div class="section-card">
-      <div class="section-header">
-        <h2 id="tituloTabela">📋 Últimas 10 Medições — Módulo 1</h2>
-        <p>Histórico recente com horário, umidade registrada e situação da irrigação.</p>
+        <div class="card">
+          <div class="card-title">Irrigação</div>
+          <div id="estadoRele" class="badge">DESLIGADA</div>
+          <p id="ultimaIrrigacao" class="card-desc">Indica se a água está ligada agora. Última rega: --:--:--</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Umidade Mínima (%)</div>
+          <div class="input-group">
+            <input type="number" id="inputLimite" min="0" max="100" value="30" />
+            <button onclick="salvarLimite()">Salvar</button>
+          </div>
+          <p class="card-desc">A rega liga automaticamente quando a umidade ficar abaixo deste valor.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Tempo entre Verificações (min)</div>
+          <div class="input-group">
+            <input type="number" id="inputIntervalo" min="0" max="1440" value="0" />
+            <button onclick="salvarIntervalo()">Salvar</button>
+          </div>
+          <p class="card-desc">De quantos em quantos minutos o solo é verificado (0 = contínuo).</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Duração da Rega (seg)</div>
+          <div class="input-group">
+            <input type="number" id="inputDuracao" min="0" max="3600" value="10" />
+            <button onclick="salvarDuracao()">Salvar</button>
+          </div>
+          <p class="card-desc">Por quantos segundos a água fica ligada cada vez que irrigar (0 = até umedecer).</p>
+        </div>
       </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Horário</th>
-              <th>Umidade Medida</th>
-              <th>Umidade Mínima</th>
-              <th>Irrigação</th>
-            </tr>
-          </thead>
-          <tbody id="tabelaMedicoes">
-            <tr>
-              <td colspan="4" class="empty-row">Aguardando as primeiras medições...</td>
-            </tr>
-          </tbody>
-        </table>
+
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 id="tituloGrafico">📈 Umidade pelo Tempo — Módulo 1</h2>
+            <p>Acompanhe como a umidade do solo varia ao longo das medições deste módulo.</p>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="graficoUmidade"></canvas>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 id="tituloTabela">📋 Últimas 10 Medições — Módulo 1</h2>
+            <p>Histórico recente com horário, umidade registrada e situação da irrigação.</p>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Horário</th>
+                <th>Umidade Medida</th>
+                <th>Umidade Mínima</th>
+                <th>Irrigação</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaMedicoes">
+              <tr>
+                <td colspan="4" class="empty-row">Aguardando as primeiras medições...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Adicione mais módulos aqui se expandir o sistema (id deve bater com ID_MODULO no ESP32-C3)
     const MODULOS_CONFIG = [
       { id: 1, nome: "Módulo 1" },
       { id: 2, nome: "Módulo 2" }
@@ -397,10 +573,23 @@
       };
     });
 
-    let moduloAtivoId = 1;
+    // "geral" ou ID numérico do módulo (1, 2...)
+    let abaAtiva = "geral";
+
+    // Carrega chave Gemini salva localmente no navegador
+    const savedKey = localStorage.getItem("diodofarm_gemini_key");
+    if (savedKey) {
+      document.getElementById("geminiApiKey").value = savedKey;
+    }
+
+    function salvarApiKey() {
+      const key = document.getElementById("geminiApiKey").value.trim();
+      localStorage.setItem("diodofarm_gemini_key", key);
+      alert("Chave da API do Gemini salva neste navegador.");
+    }
 
     const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt", {
-      clientId: "DiodoFarmMulti_" + Math.random().toString(16).substring(2, 10),
+      clientId: "DiodoFarmGeral_" + Math.random().toString(16).substring(2, 10),
       clean: true,
       reconnectPeriod: 3000
     });
@@ -431,28 +620,135 @@
       }
     });
 
+    function calcularEstimativaHorta() {
+      const ativos = MODULOS_CONFIG.map((m) => estadoModulos[m.id]).filter((st) => st.umidade !== null);
+      if (ativos.length === 0) {
+        return {
+          classe: "aguardando",
+          rotulo: "AGUARDANDO DADOS",
+          descricao: "Aguardando leituras dos sensores da horta.",
+          media: null,
+          ativosCount: 0,
+          regandoCount: 0
+        };
+      }
+
+      const soma = ativos.reduce((acc, st) => acc + st.umidade, 0);
+      const media = Math.round(soma / ativos.length);
+      const regandoCount = ativos.filter((st) => st.rele).length;
+      const abaixoLimiteCount = ativos.filter((st) => st.umidade < st.limite).length;
+
+      let classe = "bom";
+      let rotulo = "BOM";
+      let descricao = "Umidade adequada e dentro da faixa esperada para o cultivo.";
+
+      if (abaixoLimiteCount === ativos.length || media < 25) {
+        classe = "ruim";
+        rotulo = "RUIM (SOLO SECO)";
+        descricao = "Todos os setores ativos estão com umidade baixa e precisam de irrigação.";
+      } else if (abaixoLimiteCount > 0 || media < 40) {
+        classe = "medio";
+        rotulo = "MÉDIO (ATENÇÃO)";
+        descricao = "Pelo menos um canteiro está abaixo do limite mínimo ou próximo de secar.";
+      } else if (media >= 50 && media <= 85 && abaixoLimiteCount === 0) {
+        classe = "otimo";
+        rotulo = "ÓTIMO";
+        descricao = "Todos os canteiros estão bem hidratados e equilibrados.";
+      }
+
+      return {
+        classe,
+        rotulo,
+        descricao,
+        media,
+        ativosCount: ativos.length,
+        regandoCount
+      };
+    }
+
     function renderizarAbas() {
       const tabsBar = document.getElementById("tabsBar");
-      tabsBar.innerHTML = MODULOS_CONFIG.map((m) => {
+      const est = calcularEstimativaHorta();
+      const pillGeral = est.media !== null ? `${est.media}%` : "Geral";
+
+      let html = `
+        <button class="tab-btn ${abaAtiva === "geral" ? "active" : ""}" onclick="selecionarAba('geral')">
+          🏡 Visão Geral da Horta
+          <span class="tab-umid-pill">${pillGeral}</span>
+        </button>
+      `;
+
+      html += MODULOS_CONFIG.map((m) => {
         const st = estadoModulos[m.id];
         const umidTexto = st.umidade !== null ? `${st.umidade}%` : "--%";
         return `
-          <button class="tab-btn ${m.id === moduloAtivoId ? "active" : ""}" onclick="selecionarModulo(${m.id})">
+          <button class="tab-btn ${abaAtiva === m.id ? "active" : ""}" onclick="selecionarAba(${m.id})">
             🌱 ${m.nome}
             <span class="tab-umid-pill">${umidTexto}</span>
           </button>
         `;
       }).join("");
+
+      tabsBar.innerHTML = html;
     }
 
-    function selecionarModulo(id) {
-      moduloAtivoId = id;
+    function selecionarAba(alvo) {
+      abaAtiva = alvo;
       renderizarAbas();
-      atualizarTelaDoModuloAtivo();
+
+      if (abaAtiva === "geral") {
+        document.getElementById("viewGeral").classList.remove("hidden");
+        document.getElementById("viewModulo").classList.add("hidden");
+        atualizarTelaGeral();
+      } else {
+        document.getElementById("viewGeral").classList.add("hidden");
+        document.getElementById("viewModulo").classList.remove("hidden");
+        atualizarTelaDoModuloAtivo();
+      }
+    }
+
+    function atualizarTelaGeral() {
+      const est = calcularEstimativaHorta();
+
+      const badge = document.getElementById("geralBadgeEstado");
+      badge.textContent = est.rotulo;
+      badge.className = `badge ${est.classe}`;
+
+      document.getElementById("geralDescricaoEstado").textContent = est.descricao;
+      document.getElementById("geralUmidadeMedia").textContent = est.media !== null ? `${est.media}%` : "--%";
+      document.getElementById("geralModulosAtivos").textContent = `${est.ativosCount} / ${MODULOS_CONFIG.length}`;
+
+      const badgeRega = document.getElementById("geralSetoresRegando");
+      if (est.regandoCount > 0) {
+        badgeRega.textContent = `${est.regandoCount} REGANDO AGORA`;
+        badgeRega.className = "badge on";
+      } else {
+        badgeRega.textContent = "NENHUM REGANDO";
+        badgeRega.className = "badge";
+      }
+
+      const grid = document.getElementById("geralResumoModulos");
+      grid.innerHTML = MODULOS_CONFIG.map((m) => {
+        const st = estadoModulos[m.id];
+        const statusTexto = st.umidade === null
+          ? "Sem leitura"
+          : (st.umidade < st.limite ? "Abaixo do mínimo" : "Hidratado");
+        return `
+          <div class="modulo-mini-card">
+            <div class="modulo-mini-top">
+              <span>🌱 ${st.nome}</span>
+              <span class="pill-mini ${st.rele ? "on" : "off"}">${st.rele ? "Irrigando" : "Em espera"}</span>
+            </div>
+            <div>Umidade atual: <strong>${st.umidade !== null ? st.umidade + "%" : "--%"}</strong> (Mínimo: ${st.limite}%)</div>
+            <div style="font-size: 0.82rem; color: #6b7280;">Situação: ${statusTexto} • Última rega: ${st.ultimaIrrigacao}</div>
+          </div>
+        `;
+      }).join("");
     }
 
     function atualizarTelaDoModuloAtivo() {
-      const st = estadoModulos[moduloAtivoId];
+      if (abaAtiva === "geral") return;
+      const st = estadoModulos[abaAtiva];
 
       document.getElementById("umidadeAtual").textContent = st.umidade !== null ? `${st.umidade}%` : "--%";
 
@@ -491,6 +787,88 @@
           </tr>
         `).join("");
       }
+    }
+
+    function montarContextoHortaParaIA() {
+      const est = calcularEstimativaHorta();
+      const linhasModulos = MODULOS_CONFIG.map((m) => {
+        const st = estadoModulos[m.id];
+        return `- ${st.nome}: umidade atual = ${st.umidade !== null ? st.umidade + "%" : "sem dados"}, umidade mínima configurada = ${st.limite}%, intervalo de verificação = ${st.intervalo} min, duração da rega = ${st.duracao} s, relé agora = ${st.rele ? "LIGADO" : "DESLIGADO"}, última rega = ${st.ultimaIrrigacao}.`;
+      }).join("\n");
+
+      return `Dados em tempo real do sistema de irrigação automatizada DiodoFarm:
+Estado geral estimado: ${est.rotulo} (${est.descricao})
+Umidade média: ${est.media !== null ? est.media + "%" : "indisponível"}
+Detalhes por módulo:
+${linhasModulos}`;
+    }
+
+    async function chamarGeminiAPI(promptUsuario) {
+      const apiKey = document.getElementById("geminiApiKey").value.trim();
+      const outputBox = document.getElementById("aiRespostaBox");
+      const btnAnalisar = document.getElementById("btnAnalisarHorta");
+      const btnPerguntar = document.getElementById("btnPerguntarIA");
+
+      if (!apiKey) {
+        outputBox.textContent = "Por favor, cole sua chave da API do Gemini (Google AI Studio) no campo acima antes de consultar a IA.";
+        return;
+      }
+
+      btnAnalisar.disabled = true;
+      btnPerguntar.disabled = true;
+      outputBox.textContent = "Consultando o Gemini com os dados atuais da horta...";
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: promptUsuario }]
+            }]
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || "Erro na requisição à API do Gemini.");
+        }
+
+        const textoResposta = data.candidates?.[0]?.content?.parts?.[0]?.text || "Nenhuma resposta retornada.";
+        outputBox.textContent = textoResposta;
+      } catch (err) {
+        outputBox.textContent = `Erro ao consultar o Gemini: ${err.message}`;
+      } finally {
+        btnAnalisar.disabled = false;
+        btnPerguntar.disabled = false;
+      }
+    }
+
+    function analisarHortaComGemini() {
+      const contexto = montarContextoHortaParaIA();
+      const prompt = `Você é um agrônomo especialista em hortas automatizadas e IoT. Analise os dados ao vivo abaixo e responda de forma direta e prática em português:
+1. Avaliação do estado atual da horta e de cada módulo.
+2. O que fazer agora (se algum limite, intervalo ou duração de rega precisa ser ajustado).
+3. Cuidados preventivos recomendados.
+
+${contexto}`;
+      chamarGeminiAPI(prompt);
+    }
+
+    function perguntarParaGemini() {
+      const input = document.getElementById("aiPerguntaInput");
+      const pergunta = input.value.trim();
+      if (!pergunta) return;
+
+      const contexto = montarContextoHortaParaIA();
+      const prompt = `Você é um assistente especialista em hortas automatizadas. Responda à pergunta do usuário levando em conta os dados atuais da horta dele:
+
+${contexto}
+
+Pergunta do usuário: ${pergunta}`;
+      input.value = "";
+      chamarGeminiAPI(prompt);
     }
 
     client.on("connect", () => {
@@ -564,50 +942,54 @@
         if (st.historico.length > 10) {
           st.historico.pop();
         }
-
-        renderizarAbas();
       }
 
-      if (modId === moduloAtivoId) {
+      renderizarAbas();
+      if (abaAtiva === "geral") {
+        atualizarTelaGeral();
+      } else if (modId === abaAtiva) {
         atualizarTelaDoModuloAtivo();
       }
     });
 
     function salvarLimite() {
+      if (abaAtiva === "geral") return;
       const input = document.getElementById("inputLimite");
       let val = parseInt(input.value, 10);
       if (isNaN(val)) val = 30;
       val = Math.max(0, Math.min(100, val));
       input.value = val;
-      estadoModulos[moduloAtivoId].limite = val;
+      estadoModulos[abaAtiva].limite = val;
 
-      client.publish(`meuprojeto_estufa/modulo${moduloAtivoId}/config/limite`, String(val), { retain: true });
+      client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/limite`, String(val), { retain: true });
     }
 
     function salvarIntervalo() {
+      if (abaAtiva === "geral") return;
       const input = document.getElementById("inputIntervalo");
       let val = parseInt(input.value, 10);
       if (isNaN(val)) val = 0;
       val = Math.max(0, Math.min(1440, val));
       input.value = val;
-      estadoModulos[moduloAtivoId].intervalo = val;
+      estadoModulos[abaAtiva].intervalo = val;
 
-      client.publish(`meuprojeto_estufa/modulo${moduloAtivoId}/config/intervalo_min`, String(val), { retain: true });
+      client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/intervalo_min`, String(val), { retain: true });
     }
 
     function salvarDuracao() {
+      if (abaAtiva === "geral") return;
       const input = document.getElementById("inputDuracao");
       let val = parseInt(input.value, 10);
       if (isNaN(val)) val = 10;
       val = Math.max(0, Math.min(3600, val));
       input.value = val;
-      estadoModulos[moduloAtivoId].duracao = val;
+      estadoModulos[abaAtiva].duracao = val;
 
-      client.publish(`meuprojeto_estufa/modulo${moduloAtivoId}/config/duracao_seg`, String(val), { retain: true });
+      client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/duracao_seg`, String(val), { retain: true });
     }
 
     renderizarAbas();
-    atualizarTelaDoModuloAtivo();
+    selecionarAba("geral");
   </script>
 </body>
 </html>
