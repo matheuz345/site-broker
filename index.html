@@ -80,7 +80,6 @@
     .dot.online { background-color: #10b981; }
     .dot.offline { background-color: #ef4444; }
 
-    /* Barra de Abas */
     .tabs-bar {
       display: flex;
       flex-wrap: wrap;
@@ -247,7 +246,6 @@
     .section-header h2 { margin: 0 0 4px 0; font-size: 1.05rem; font-weight: 700; }
     .section-header p { margin: 0; font-size: 0.84rem; color: #6b7280; }
 
-    /* Estilos da Visão Geral e Setor Gemini IA */
     .modulos-resumo-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -271,27 +269,6 @@
       align-items: center;
       font-weight: 700;
       color: #0b3b1e;
-    }
-
-    .api-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      padding: 12px 14px;
-      border-radius: 10px;
-      margin-bottom: 14px;
-    }
-
-    .api-bar input {
-      flex: 1;
-      min-width: 220px;
-      padding: 8px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 0.9rem;
     }
 
     .ai-output-box {
@@ -394,12 +371,9 @@
       </div>
     </div>
 
-    <!-- Barra de Abas (Visão Geral + Módulos) -->
     <div id="tabsBar" class="tabs-bar"></div>
 
-    <!-- ===================================================================== -->
-    <!-- VISÃO 1: ABA GERAL DA HORTA + INTELIGÊNCIA ARTIFICIAL (GEMINI)        -->
-    <!-- ===================================================================== -->
+    <!-- VISÃO 1: ABA GERAL DA HORTA + INTELIGÊNCIA ARTIFICIAL (GEMINI) -->
     <div id="viewGeral" style="display: flex; flex-direction: column; gap: 18px;">
       <div class="cards">
         <div class="card">
@@ -437,7 +411,6 @@
         <div id="geralResumoModulos" class="modulos-resumo-grid"></div>
       </div>
 
-      <!-- Setor de Inteligência Artificial Integrada (Gemini API) -->
       <div class="section-card">
         <div class="section-header">
           <div>
@@ -449,13 +422,7 @@
           </button>
         </div>
 
-        <div class="api-bar">
-          <strong style="font-size: 0.85rem; color: #0b3b1e;">Chave API Gemini:</strong>
-          <input type="password" id="geminiApiKey" placeholder="Cole sua chave AIza... do Google AI Studio" />
-          <button class="btn-primary" onclick="salvarApiKey()">Salvar Chave</button>
-        </div>
-
-        <div id="aiRespostaBox" class="ai-output-box">Insira sua chave da API do Gemini acima e clique em "Analisar Estado da Horta" para receber recomendações baseadas nos dados ao vivo dos seus sensores, ou faça uma pergunta abaixo.</div>
+        <div id="aiRespostaBox" class="ai-output-box">Clique em "Analisar Estado da Horta" para receber recomendações baseadas nos dados ao vivo dos seus sensores, ou faça uma pergunta abaixo.</div>
 
         <div class="ai-ask-bar">
           <input type="text" id="aiPerguntaInput" placeholder="Pergunte algo sobre a horta (ex: A umidade está boa para alface? Preciso ajustar o limite?)" onkeydown="if(event.key==='Enter') perguntarParaGemini()" />
@@ -464,9 +431,7 @@
       </div>
     </div>
 
-    <!-- ===================================================================== -->
-    <!-- VISÃO 2: ABA INDIVIDUAL DE CADA MÓDULO                                -->
-    <!-- ===================================================================== -->
+    <!-- VISÃO 2: ABA INDIVIDUAL DE CADA MÓDULO -->
     <div id="viewModulo" class="hidden" style="display: flex; flex-direction: column; gap: 18px;">
       <div class="cards">
         <div class="card">
@@ -550,6 +515,9 @@
   </div>
 
   <script>
+    // Chave embutida para uso direto na aplicação (visível no código-fonte front-end)
+    const GEMINI_API_KEY_PADRAO = "AQ.Ab8RN6LD2WbVN5AXkxxvIoW8geG1s_BjsjL0wgJ2MxcO3xPSjQ";
+
     const MODULOS_CONFIG = [
       { id: 1, nome: "Módulo 1" },
       { id: 2, nome: "Módulo 2" }
@@ -573,20 +541,7 @@
       };
     });
 
-    // "geral" ou ID numérico do módulo (1, 2...)
     let abaAtiva = "geral";
-
-    // Carrega chave Gemini salva localmente no navegador
-    const savedKey = localStorage.getItem("diodofarm_gemini_key");
-    if (savedKey) {
-      document.getElementById("geminiApiKey").value = savedKey;
-    }
-
-    function salvarApiKey() {
-      const key = document.getElementById("geminiApiKey").value.trim();
-      localStorage.setItem("diodofarm_gemini_key", key);
-      alert("Chave da API do Gemini salva neste navegador.");
-    }
 
     const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt", {
       clientId: "DiodoFarmGeral_" + Math.random().toString(16).substring(2, 10),
@@ -804,45 +759,49 @@ ${linhasModulos}`;
     }
 
     async function chamarGeminiAPI(promptUsuario) {
-      const apiKey = document.getElementById("geminiApiKey").value.trim();
       const outputBox = document.getElementById("aiRespostaBox");
       const btnAnalisar = document.getElementById("btnAnalisarHorta");
       const btnPerguntar = document.getElementById("btnPerguntarIA");
-
-      if (!apiKey) {
-        outputBox.textContent = "Por favor, cole sua chave da API do Gemini (Google AI Studio) no campo acima antes de consultar a IA.";
-        return;
-      }
 
       btnAnalisar.disabled = true;
       btnPerguntar.disabled = true;
       outputBox.textContent = "Consultando o Gemini com os dados atuais da horta...";
 
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: promptUsuario }]
-            }]
-          })
-        });
+      const modelos = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+      let ultimoErro = "";
 
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error?.message || "Erro na requisição à API do Gemini.");
+      for (const modelo of modelos) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY_PADRAO)}`;
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: promptUsuario }]
+              }]
+            })
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            ultimoErro = data.error?.message || `Erro HTTP ${response.status}`;
+            continue;
+          }
+
+          const textoResposta = data.candidates?.[0]?.content?.parts?.[0]?.text || "Nenhuma resposta retornada.";
+          outputBox.textContent = textoResposta;
+          btnAnalisar.disabled = false;
+          btnPerguntar.disabled = false;
+          return;
+        } catch (err) {
+          ultimoErro = err.message;
         }
-
-        const textoResposta = data.candidates?.[0]?.content?.parts?.[0]?.text || "Nenhuma resposta retornada.";
-        outputBox.textContent = textoResposta;
-      } catch (err) {
-        outputBox.textContent = `Erro ao consultar o Gemini: ${err.message}`;
-      } finally {
-        btnAnalisar.disabled = false;
-        btnPerguntar.disabled = false;
       }
+
+      outputBox.textContent = `Erro ao consultar o Gemini: ${ultimoErro}`;
+      btnAnalisar.disabled = false;
+      btnPerguntar.disabled = false;
     }
 
     function analisarHortaComGemini() {
