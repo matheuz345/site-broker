@@ -536,6 +536,7 @@
         intervalo: 0,
         duracao: 10,
         ultimaAtualizacaoMs: 0,
+        bloqueioConfigAteMs: 0,
         labels: [],
         dadosGrafico: [],
         historico: []
@@ -673,6 +674,10 @@
       } else {
         document.getElementById("viewGeral").classList.add("hidden");
         document.getElementById("viewModulo").classList.remove("hidden");
+        const st = estadoModulos[abaAtiva];
+        document.getElementById("inputLimite").value = st.limite;
+        document.getElementById("inputIntervalo").value = st.intervalo;
+        document.getElementById("inputDuracao").value = st.duracao;
         atualizarTelaDoModuloAtivo();
       }
     }
@@ -722,6 +727,7 @@
       if (abaAtiva === "geral") return;
       const st = estadoModulos[abaAtiva];
       const online = moduloEstaAtivo(st);
+      const agora = Date.now();
 
       document.getElementById("umidadeAtual").textContent = st.umidade !== null ? `${st.umidade}%` : "--%";
 
@@ -732,9 +738,16 @@
       document.getElementById("ultimaIrrigacao").textContent =
         `Indica se a água está ligada agora. Última rega: ${st.ultimaIrrigacao}`;
 
-      document.getElementById("inputLimite").value = st.limite;
-      document.getElementById("inputIntervalo").value = st.intervalo;
-      document.getElementById("inputDuracao").value = st.duracao;
+      const emBloqueio = st.bloqueioConfigAteMs && agora < st.bloqueioConfigAteMs;
+      const elLim = document.getElementById("inputLimite");
+      const elInt = document.getElementById("inputIntervalo");
+      const elDur = document.getElementById("inputDuracao");
+
+      if (!emBloqueio) {
+        if (document.activeElement !== elLim) elLim.value = st.limite;
+        if (document.activeElement !== elInt) elInt.value = st.intervalo;
+        if (document.activeElement !== elDur) elDur.value = st.duracao;
+      }
 
       document.getElementById("tituloGrafico").textContent = `📈 Umidade pelo Tempo — ${st.nome}`;
       document.getElementById("tituloTabela").textContent = `📋 Últimas 10 Medições — ${st.nome}`;
@@ -905,13 +918,25 @@ Pergunta do usuário: ${pergunta}`;
         st.ultimaIrrigacao = msg;
       } else if (subtopico === "config/limite_ativo") {
         const val = parseInt(msg, 10);
-        if (!isNaN(val)) st.limite = val;
+        const emBloqueio = st.bloqueioConfigAteMs && Date.now() < st.bloqueioConfigAteMs;
+        if (!isNaN(val) && (!emBloqueio || val === st.limite)) {
+          st.limite = val;
+          if (val === st.limite) st.bloqueioConfigAteMs = 0;
+        }
       } else if (subtopico === "config/intervalo_ativo") {
         const val = parseInt(msg, 10);
-        if (!isNaN(val)) st.intervalo = val;
+        const emBloqueio = st.bloqueioConfigAteMs && Date.now() < st.bloqueioConfigAteMs;
+        if (!isNaN(val) && (!emBloqueio || val === st.intervalo)) {
+          st.intervalo = val;
+          if (val === st.intervalo) st.bloqueioConfigAteMs = 0;
+        }
       } else if (subtopico === "config/duracao_ativa") {
         const val = parseInt(msg, 10);
-        if (!isNaN(val)) st.duracao = val;
+        const emBloqueio = st.bloqueioConfigAteMs && Date.now() < st.bloqueioConfigAteMs;
+        if (!isNaN(val) && (!emBloqueio || val === st.duracao)) {
+          st.duracao = val;
+          if (val === st.duracao) st.bloqueioConfigAteMs = 0;
+        }
       } else if (subtopico === "umidade") {
         const valor = parseInt(msg, 10);
         if (isNaN(valor)) return;
@@ -961,9 +986,13 @@ Pergunta do usuário: ${pergunta}`;
       if (isNaN(val)) val = 30;
       val = Math.max(0, Math.min(100, val));
       input.value = val;
-      estadoModulos[abaAtiva].limite = val;
+
+      const st = estadoModulos[abaAtiva];
+      st.limite = val;
+      st.bloqueioConfigAteMs = Date.now() + 6000;
 
       client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/limite`, String(val), { retain: true });
+      atualizarTelaDoModuloAtivo();
     }
 
     function salvarIntervalo() {
@@ -973,9 +1002,13 @@ Pergunta do usuário: ${pergunta}`;
       if (isNaN(val)) val = 0;
       val = Math.max(0, Math.min(1440, val));
       input.value = val;
-      estadoModulos[abaAtiva].intervalo = val;
+
+      const st = estadoModulos[abaAtiva];
+      st.intervalo = val;
+      st.bloqueioConfigAteMs = Date.now() + 6000;
 
       client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/intervalo_min`, String(val), { retain: true });
+      atualizarTelaDoModuloAtivo();
     }
 
     function salvarDuracao() {
@@ -985,9 +1018,13 @@ Pergunta do usuário: ${pergunta}`;
       if (isNaN(val)) val = 10;
       val = Math.max(0, Math.min(3600, val));
       input.value = val;
-      estadoModulos[abaAtiva].duracao = val;
+
+      const st = estadoModulos[abaAtiva];
+      st.duracao = val;
+      st.bloqueioConfigAteMs = Date.now() + 6000;
 
       client.publish(`meuprojeto_estufa/modulo${abaAtiva}/config/duracao_seg`, String(val), { retain: true });
+      atualizarTelaDoModuloAtivo();
     }
 
     renderizarAbas();
